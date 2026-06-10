@@ -180,20 +180,24 @@
   }
 }
 
-.login-field-input {
+.login-field-input,
+.form-field-input {
   background: transparent;
 }
 
-.login-field-input::placeholder {
+.login-field-input::placeholder,
+.form-field-input::placeholder {
   color: rgba(148, 163, 184, 0.75);
 }
 
-.login-screen-dark .login-field-input {
+.login-screen-dark .login-field-input,
+.form-shell-dark .form-field-input {
   color: #f8fafc;
   caret-color: #f8fafc;
 }
 
-.login-screen-light .login-field-input {
+.login-screen-light .login-field-input,
+.form-shell-light .form-field-input {
   color: #0f172a;
   caret-color: #0f172a;
 }
@@ -201,14 +205,22 @@
 .login-field-input:-webkit-autofill,
 .login-field-input:-webkit-autofill:hover,
 .login-field-input:-webkit-autofill:focus,
-.login-field-input:-webkit-autofill:active {
+.login-field-input:-webkit-autofill:active,
+.form-field-input:-webkit-autofill,
+.form-field-input:-webkit-autofill:hover,
+.form-field-input:-webkit-autofill:focus,
+.form-field-input:-webkit-autofill:active {
   transition: background-color 9999s ease-in-out 0s;
 }
 
 .login-screen-dark .login-field-input:-webkit-autofill,
 .login-screen-dark .login-field-input:-webkit-autofill:hover,
 .login-screen-dark .login-field-input:-webkit-autofill:focus,
-.login-screen-dark .login-field-input:-webkit-autofill:active {
+.login-screen-dark .login-field-input:-webkit-autofill:active,
+.form-shell-dark .form-field-input:-webkit-autofill,
+.form-shell-dark .form-field-input:-webkit-autofill:hover,
+.form-shell-dark .form-field-input:-webkit-autofill:focus,
+.form-shell-dark .form-field-input:-webkit-autofill:active {
   -webkit-text-fill-color: #f8fafc;
   caret-color: #f8fafc;
   box-shadow: 0 0 0 1000px #161f2b inset;
@@ -217,7 +229,11 @@
 .login-screen-light .login-field-input:-webkit-autofill,
 .login-screen-light .login-field-input:-webkit-autofill:hover,
 .login-screen-light .login-field-input:-webkit-autofill:focus,
-.login-screen-light .login-field-input:-webkit-autofill:active {
+.login-screen-light .login-field-input:-webkit-autofill:active,
+.form-shell-light .form-field-input:-webkit-autofill,
+.form-shell-light .form-field-input:-webkit-autofill:hover,
+.form-shell-light .form-field-input:-webkit-autofill:focus,
+.form-shell-light .form-field-input:-webkit-autofill:active {
   -webkit-text-fill-color: #0f172a;
   caret-color: #0f172a;
   box-shadow: 0 0 0 1000px #f8fafc inset;

@@ -1,32 +1,39 @@
 import { useState } from "react";
 import { Eye, EyeOff, Zap, ArrowRight, Lock, Mail } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { login } from "../store/authSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 interface LoginProps {
   onLogin: () => void;
 }
 
 export function Login({ onLogin }: LoginProps) {
+  const dispatch = useAppDispatch();
+  const authStatus = useAppSelector((state) => state.auth.status);
+  const authError = useAppSelector((state) => state.auth.error);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const { colors, theme } = useTheme();
+  const loading = authStatus === "loading";
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
       setError("Preencha todos os campos.");
       return;
     }
     setError("");
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+
+    try {
+      await dispatch(login({ email, password })).unwrap();
       onLogin();
-    }, 1600);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Não foi possível acessar sua conta.");
+    }
   };
 
   return (
@@ -220,9 +227,9 @@ export function Login({ onLogin }: LoginProps) {
             </div>
 
             {/* Error */}
-            {error && (
+            {(error || authError) && (
               <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: `${colors.red}14`, border: `1px solid ${colors.red}33` }}>
-                <span style={{ fontSize: "13px", color: colors.red }}>{error}</span>
+                <span style={{ fontSize: "13px", color: colors.red }}>{error || authError}</span>
               </div>
             )}
 

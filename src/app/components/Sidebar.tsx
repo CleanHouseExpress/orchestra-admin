@@ -2,9 +2,11 @@ import { useState } from "react";
 import {
   LayoutDashboard, Building2, Users, Wallet, FileText,
   CreditCard, BarChart3, UserCog, Settings, ChevronLeft,
-  ChevronRight, Zap
+  ChevronRight, Zap, LogOut
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { logout } from "../store/authSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
@@ -26,6 +28,15 @@ interface SidebarProps {
 export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const { colors, theme } = useTheme();
+  const dispatch = useAppDispatch();
+  const user = useAppSelector((state) => state.auth.user);
+  const initials = (user?.name ?? "Admin")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
 
   return (
     <aside
@@ -116,14 +127,30 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
             className="shrink-0 rounded-full flex items-center justify-center"
             style={{ width: "32px", height: "32px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)", fontSize: "13px", color: "#fff", fontWeight: 600 }}
           >
-            JD
+            {initials}
           </div>
           {!collapsed && (
-            <div>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: colors.textPrimary, fontWeight: 500 }}>João Dias</p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: colors.textMuted }}>Admin</p>
+            <div className="min-w-0 flex-1">
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: colors.textPrimary, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name ?? "Admin"}</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: colors.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.role ?? "Admin"}</p>
             </div>
           )}
+          <button
+            onClick={() => dispatch(logout())}
+            className="shrink-0 rounded-lg p-2 transition-all"
+            style={{ color: colors.textMuted, background: "transparent" }}
+            title="Sair"
+            onMouseEnter={e => {
+              e.currentTarget.style.background = colors.hoverBg;
+              e.currentTarget.style.color = "#EF4444";
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.background = "transparent";
+              e.currentTarget.style.color = colors.textMuted;
+            }}
+          >
+            <LogOut size={15} />
+          </button>
         </div>
       </div>
     </aside>
