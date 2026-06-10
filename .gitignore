@@ -4,6 +4,7 @@ node_modules/
 # Build output
 dist/
 build/
+Templates/
 
 # Vite
 .vite/
@@ -36,3 +37,4 @@ coverage/
 
 # TypeScript
 *.tsbuildinfo
+

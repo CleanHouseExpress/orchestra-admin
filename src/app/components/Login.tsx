@@ -31,7 +31,7 @@ export function Login({ onLogin }: LoginProps) {
 
   return (
     <div
-      className="min-h-screen flex"
+      className={`login-screen login-screen-${theme} min-h-screen flex`}
       style={{ background: colors.bg, fontFamily: "'Inter', sans-serif", transition: "background 0.3s" }}
     >
       {/* Left panel */}
@@ -179,7 +179,7 @@ export function Login({ onLogin }: LoginProps) {
                   onFocus={() => setFocusedField("email")}
                   onBlur={() => setFocusedField(null)}
                   placeholder="seu@email.com"
-                  className="flex-1 bg-transparent outline-none"
+                  className="login-field-input flex-1 bg-transparent outline-none"
                   style={{ fontSize: "14px", color: colors.textPrimary }}
                 />
               </div>
@@ -210,7 +210,7 @@ export function Login({ onLogin }: LoginProps) {
                   onFocus={() => setFocusedField("password")}
                   onBlur={() => setFocusedField(null)}
                   placeholder="••••••••"
-                  className="flex-1 bg-transparent outline-none"
+                  className="login-field-input flex-1 bg-transparent outline-none"
                   style={{ fontSize: "14px", color: colors.textPrimary }}
                 />
                 <button type="button" onClick={() => setShowPassword(!showPassword)} className="transition-opacity hover:opacity-80" style={{ color: colors.textMuted }}>
