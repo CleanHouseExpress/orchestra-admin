@@ -7,6 +7,7 @@ import {
 import { useTheme } from "./ThemeContext";
 import { logout } from "../store/authSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { getCompanyUserRoleLabel } from "../services/companiesApi";
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
@@ -30,6 +31,7 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
   const { colors, theme } = useTheme();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
+  const userRoleLabel = user ? getCompanyUserRoleLabel(user) : "Admin";
   const initials = (user?.name ?? "Admin")
     .split(" ")
     .filter(Boolean)
@@ -132,7 +134,7 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
           {!collapsed && (
             <div className="min-w-0 flex-1">
               <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "13px", color: colors.textPrimary, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.name ?? "Admin"}</p>
-              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: colors.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{user?.role ?? "Admin"}</p>
+              <p style={{ fontFamily: "'Inter', sans-serif", fontSize: "11px", color: colors.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{userRoleLabel}</p>
             </div>
           )}
           <button

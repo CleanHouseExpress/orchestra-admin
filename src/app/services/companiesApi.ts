@@ -47,7 +47,34 @@ export interface ApiCompany {
     name: string;
     email: string;
     role?: string | null;
+    role_id?: number | null;
+    role_title?: string | null;
+    status?: string | null;
+    created_at?: string | null;
+    updated_at?: string | null;
   }>;
+}
+
+export interface ApiCompanyUser {
+  id: number;
+  company_id?: number | null;
+  name: string;
+  email: string;
+  role?: string | null;
+  role_id?: number | null;
+  role_title?: string | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export function isCompanyAdminUser(user: Pick<ApiCompanyUser, "role" | "role_id" | "role_title">) {
+  return user.role === "company_admin" || user.role_id === 1 || user.role_title?.toLowerCase() === "company admin";
+}
+
+export function getCompanyUserRoleLabel(user: Pick<ApiCompanyUser, "role" | "role_id" | "role_title">) {
+  if (isCompanyAdminUser(user)) return "Administrador";
+  return user.role_title ?? user.role ?? "Usuário";
 }
 
 export interface PaginatedResponse<T> {
@@ -131,6 +158,10 @@ export const companiesApi = {
 
   show(id: number) {
     return apiRequest<ApiCompany>(`/companies/${id}`, { auth: true });
+  },
+
+  users(id: number) {
+    return apiRequest<ApiCompanyUser[]>(`/companies/${id}/users`, { auth: true });
   },
 
   existsByEmail(email: string) {

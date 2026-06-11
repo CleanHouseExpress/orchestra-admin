@@ -4,7 +4,10 @@ export interface AuthUser {
   id: number;
   name: string;
   email: string;
-  role?: string;
+  role?: string | null;
+  role_id?: number | null;
+  role_title?: string | null;
+  status?: string | null;
   company_id?: number | null;
 }
 

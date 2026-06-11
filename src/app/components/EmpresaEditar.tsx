@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, CreditCard, DollarSign, Globe, Hash, Mail,
   MapPin, Phone, Save, Search, User, X,
 } from "lucide-react";
-import { CompanyPayload, companiesApi } from "../services/companiesApi";
+import { CompanyPayload, companiesApi, isCompanyAdminUser } from "../services/companiesApi";
 import { mapCompany, statusToApi } from "./companyView";
 import { useTheme } from "./ThemeContext";
 
@@ -140,7 +140,7 @@ export function EmpresaEditar() {
       .then((data) => {
         if (!active) return;
         const company = mapCompany(data);
-        const admin = data.users?.find((user) => user.role === "company_admin");
+        const admin = data.users?.find(isCompanyAdminUser);
         setForm({
           name: data.name ?? "",
           cnpj: data.cnpj ?? data.document ?? "",

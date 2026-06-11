@@ -6,7 +6,7 @@ import {
   TrendingDown, TrendingUp, Users, XCircle,
 } from "lucide-react";
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { companiesApi } from "../services/companiesApi";
+import { ApiCompanyUser, companiesApi, getCompanyUserRoleLabel, isCompanyAdminUser } from "../services/companiesApi";
 import { CompanyView, mapCompany } from "./companyView";
 import { useTheme } from "./ThemeContext";
 
@@ -63,12 +63,16 @@ function CustomTooltip({ active, payload, label }: any) {
   );
 }
 
-function EmpresaDetalheView({ company }: { company: CompanyView }) {
+function EmpresaDetalheView({ company, users, usersLoading, usersError }: {
+  company: CompanyView;
+  users: ApiCompanyUser[];
+  usersLoading: boolean;
+  usersError: string | null;
+}) {
   const { colors, theme } = useTheme();
   const navigate = useNavigate();
   const st = statusConfig[company.status];
   const pl = planConfig[company.plan] ?? planConfig.Basic;
-  const users = company.raw.users ?? [];
   const cardStyle = {
     background: colors.card,
     border: `1px solid ${colors.border}`,
@@ -176,17 +180,38 @@ function EmpresaDetalheView({ company }: { company: CompanyView }) {
             <div className="px-5 py-4" style={{ borderBottom: `1px solid ${colors.border}` }}>
               <h3 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: 16 }}>Usuários da Empresa</h3>
             </div>
-            {users.length ? users.map((user, index) => (
-              <div key={user.id} className="flex items-center justify-between px-5 py-4" style={{ borderBottom: index < users.length - 1 ? `1px solid ${colors.border}` : "none" }}>
-                <div>
-                  <p style={{ fontSize: 14, color: colors.textPrimary, fontWeight: 500 }}>{user.name}</p>
-                  <p style={{ fontSize: 12, color: colors.textMuted }}>{user.email}</p>
-                </div>
-                <span className="rounded-full px-2.5 py-1" style={{ fontSize: 11, color: user.role === "company_admin" ? "#3B82F6" : colors.textSecondary, background: user.role === "company_admin" ? "rgba(59,130,246,0.1)" : colors.surface }}>
-                  {user.role === "company_admin" ? "Administrador" : user.role ?? "Usuário"}
-                </span>
+            {usersLoading ? (
+              <div className="px-5 py-5 space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <div className="space-y-2">
+                      <div className="rounded-full" style={{ width: 140, height: 14, background: colors.hoverBg }} />
+                      <div className="rounded-full" style={{ width: 210, height: 11, background: colors.hoverBg }} />
+                    </div>
+                    <div className="rounded-full" style={{ width: 88, height: 24, background: colors.hoverBg }} />
+                  </div>
+                ))}
               </div>
-            )) : (
+            ) : usersError ? (
+              <div className="flex items-center gap-3 px-5 py-8">
+                <XCircle size={18} style={{ color: "#EF4444" }} />
+                <p style={{ fontSize: 13, color: colors.textMuted }}>{usersError}</p>
+              </div>
+            ) : users.length ? users.map((user, index) => {
+              const isAdmin = isCompanyAdminUser(user);
+
+              return (
+                <div key={user.id} className="flex items-center justify-between px-5 py-4" style={{ borderBottom: index < users.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+                  <div>
+                    <p style={{ fontSize: 14, color: colors.textPrimary, fontWeight: 500 }}>{user.name}</p>
+                    <p style={{ fontSize: 12, color: colors.textMuted }}>{user.email}</p>
+                  </div>
+                  <span className="rounded-full px-2.5 py-1" style={{ fontSize: 11, color: isAdmin ? "#3B82F6" : colors.textSecondary, background: isAdmin ? "rgba(59,130,246,0.1)" : colors.surface }}>
+                    {getCompanyUserRoleLabel(user)}
+                  </span>
+                </div>
+              );
+            }) : (
               <div className="flex items-center gap-3 px-5 py-8">
                 <Building2 size={18} style={{ color: colors.textMuted }} />
                 <p style={{ fontSize: 13, color: colors.textMuted }}>Nenhum usuário vinculado a esta empresa.</p>
@@ -203,6 +228,9 @@ export function EmpresaDetalhe() {
   const { id } = useParams();
   const { colors } = useTheme();
   const [company, setCompany] = useState<CompanyView | null>(null);
+  const [users, setUsers] = useState<ApiCompanyUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -210,7 +238,9 @@ export function EmpresaDetalhe() {
     let active = true;
 
     setCompany(null);
+    setUsers([]);
     setError(null);
+    setUsersError(null);
 
     if (!companyId) {
       setError("Empresa inválida.");
@@ -220,6 +250,20 @@ export function EmpresaDetalhe() {
     companiesApi.show(companyId)
       .then((data) => active && setCompany(mapCompany(data)))
       .catch((err: Error) => active && setError(err.message || "Não foi possível carregar a empresa."));
+
+    setUsersLoading(true);
+    companiesApi.users(companyId)
+      .then((data) => {
+        if (!active) return;
+        setUsers(data);
+        setUsersError(null);
+      })
+      .catch((err: Error) => {
+        if (!active) return;
+        setUsers([]);
+        setUsersError(err.message || "Não foi possível carregar os usuários.");
+      })
+      .finally(() => active && setUsersLoading(false));
 
     return () => {
       active = false;
@@ -241,5 +285,5 @@ export function EmpresaDetalhe() {
     return <PageLoading />;
   }
 
-  return <EmpresaDetalheView company={company} />;
+  return <EmpresaDetalheView company={company} users={users} usersLoading={usersLoading} usersError={usersError} />;
 }
