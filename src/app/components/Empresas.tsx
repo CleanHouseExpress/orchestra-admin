@@ -9,9 +9,10 @@ import {
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { NovaEmpresaForm, NovaEmpresaModal } from "./NovaEmpresaModal";
-import { createCompany, fetchCompanies, fetchCompanyMetrics, refreshCompanyMetrics, setPage, setPlano, setSearch, setSegmento, setStatus } from "../store/companiesSlice";
+import { fetchCompanies, fetchCompanyMetrics, refreshCompanyMetrics, setPage, setPlano, setSearch, setSegmento, setStatus } from "../store/companiesSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { CompanyView, formatCurrency, mapCompany } from "./companyView";
+import { CompanySseEvent, companiesApi } from "../services/companiesApi";
 
 const fallbackCompanies: CompanyView[] = [];
 
@@ -185,10 +186,11 @@ export function Empresas() {
     dispatch(fetchCompanies());
   }, [dispatch, page, search, segmento, plano, status]);
 
-  const handleCreateCompany = async (form: NovaEmpresaForm) => {
-    await dispatch(createCompany({
+  const handleCreateCompany = async (form: NovaEmpresaForm, onProgress: (event: CompanySseEvent) => void) => {
+    await companiesApi.createSse({
       name: form.name,
       cnpj: form.cnpj,
+      subdomain: form.domain,
       description: form.description || null,
       email: form.email,
       phone: form.phone || form.whatsapp || null,
@@ -216,7 +218,7 @@ export function Empresas() {
         email: form.email,
         password: "123456",
       },
-    })).unwrap();
+    }, onProgress);
 
     dispatch(refreshCompanyMetrics());
 

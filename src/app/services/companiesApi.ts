@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
+import { API_BASE_URL, apiRequest, getStoredAuthToken } from "./apiClient";
 
 export type CompanyStatus = "active" | "pending" | "inactive";
 
@@ -78,6 +78,9 @@ export interface CompanyMetrics {
 
 export type CompanyPayload = Partial<Omit<ApiCompany, "id" | "modules" | "users">> & {
   cnpj?: string;
+  domain?: string;
+  domains?: string[];
+  subdomain?: string;
   contactName?: string | null;
   contactRole?: string | null;
   modules?: number[];
@@ -88,28 +91,20 @@ export type CompanyPayload = Partial<Omit<ApiCompany, "id" | "modules" | "users"
   };
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...init?.headers,
-    },
-    ...init,
-  });
+export interface CompanySseEvent {
+  event: string;
+  data: Record<string, unknown>;
+}
 
-  if (!response.ok) {
-    const data = await response.json().catch(() => null);
-    const firstError = data?.errors ? Object.values(data.errors).flat()[0] : null;
-    const message = data?.message ?? firstError ?? `Erro ${response.status} ao chamar a API`;
-    throw new Error(message || `Erro ${response.status} ao chamar a API`);
-  }
+export interface CompanyExistsByEmailResponse {
+  email: string;
+  exists: boolean;
+}
 
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
-  return response.json() as Promise<T>;
+export interface CompanyExistsByDomainResponse {
+  subdomain: string;
+  domain: string;
+  exists: boolean;
 }
 
 function toQuery(params: CompanyListParams): string {
@@ -127,46 +122,140 @@ function toQuery(params: CompanyListParams): string {
 
 export const companiesApi = {
   list(params: CompanyListParams = {}) {
-    return request<PaginatedResponse<ApiCompany>>(`/companies${toQuery(params)}`);
+    return apiRequest<PaginatedResponse<ApiCompany>>(`/companies${toQuery(params)}`, { auth: true });
   },
 
   metrics(params: Omit<CompanyListParams, "page" | "per_page"> = {}) {
-    return request<CompanyMetrics>(`/companies/metrics${toQuery(params)}`);
+    return apiRequest<CompanyMetrics>(`/companies/metrics${toQuery(params)}`, { auth: true });
   },
 
   show(id: number) {
-    return request<ApiCompany>(`/companies/${id}`);
+    return apiRequest<ApiCompany>(`/companies/${id}`, { auth: true });
+  },
+
+  existsByEmail(email: string) {
+    const query = new URLSearchParams({ email });
+    return apiRequest<CompanyExistsByEmailResponse>(`/companies/exists/email?${query.toString()}`, { auth: true });
+  },
+
+  existsByDomain(subdomain: string) {
+    const query = new URLSearchParams({ subdomain });
+    return apiRequest<CompanyExistsByDomainResponse>(`/companies/exists/domain?${query.toString()}`, { auth: true });
   },
 
   create(payload: CompanyPayload) {
-    return request<ApiCompany>("/companies", {
+    return apiRequest<ApiCompany>("/companies", {
+      auth: true,
       method: "POST",
       body: JSON.stringify(payload),
     });
   },
 
+  async createSse(payload: CompanyPayload, onEvent: (event: CompanySseEvent) => void) {
+    const token = getStoredAuthToken();
+    const response = await fetch(`${API_BASE_URL}/companies/sse`, {
+      method: "POST",
+      headers: {
+        Accept: "text/event-stream",
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => null);
+      const firstError = data?.errors ? Object.values(data.errors).flat()[0] : null;
+      const message = data?.message ?? firstError ?? `Erro ${response.status} ao chamar a API`;
+
+      throw new Error(String(message || `Erro ${response.status} ao chamar a API`));
+    }
+
+    if (!response.body) {
+      throw new Error("A API não retornou um stream SSE válido.");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let createdCompany: ApiCompany | null = null;
+
+    const dispatchEventBlock = (block: string) => {
+      const lines = block.split(/\r?\n/);
+      const event = lines.find(line => line.startsWith("event:"))?.slice(6).trim() || "message";
+      const data = lines
+        .filter(line => line.startsWith("data:"))
+        .map(line => line.slice(5).trim())
+        .join("\n");
+      const parsedData = data ? JSON.parse(data) as Record<string, unknown> : {};
+
+      onEvent({ event, data: parsedData });
+
+      if (event === "completed" && parsedData.company) {
+        createdCompany = parsedData.company as ApiCompany;
+      }
+
+      if (event === "failed") {
+        throw new Error(String(parsedData.error || parsedData.message || "Falha ao criar empresa."));
+      }
+    };
+
+    while (true) {
+      const { value, done } = await reader.read();
+      buffer += decoder.decode(value, { stream: !done });
+      const blocks = buffer.split(/\n\n|\r\n\r\n/);
+      buffer = blocks.pop() ?? "";
+
+      for (const block of blocks) {
+        const trimmedBlock = block.trim();
+
+        if (trimmedBlock) {
+          dispatchEventBlock(trimmedBlock);
+        }
+      }
+
+      if (done) {
+        break;
+      }
+    }
+
+    if (buffer.trim()) {
+      dispatchEventBlock(buffer.trim());
+    }
+
+    if (!createdCompany) {
+      throw new Error("A criação terminou sem retornar a empresa criada.");
+    }
+
+    return createdCompany;
+  },
+
   update(id: number, payload: CompanyPayload) {
-    return request<ApiCompany>(`/companies/${id}`, {
+    return apiRequest<ApiCompany>(`/companies/${id}`, {
+      auth: true,
       method: "PATCH",
       body: JSON.stringify(payload),
     });
   },
 
   remove(id: number) {
-    return request<void>(`/companies/${id}`, {
+    return apiRequest<void>(`/companies/${id}`, {
+      auth: true,
       method: "DELETE",
     });
   },
 
   syncModules(id: number, modules: number[]) {
-    return request<ApiCompany>(`/companies/${id}/modules`, {
+    return apiRequest<ApiCompany>(`/companies/${id}/modules`, {
+      auth: true,
       method: "PUT",
       body: JSON.stringify({ modules }),
     });
   },
 
   saveAdmin(id: number, payload: { name: string; email: string; password?: string }) {
-    return request(`/companies/${id}/admin`, {
+    return apiRequest(`/companies/${id}/admin`, {
+      auth: true,
       method: "PUT",
       body: JSON.stringify(payload),
     });

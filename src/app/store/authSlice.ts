@@ -1,5 +1,6 @@
 import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
 import { AuthUser, authApi } from "../services/authApi";
+import { AUTH_TOKEN_KEY, AUTH_USER_KEY, clearStoredAuth, setStoredAuth } from "../services/apiClient";
 
 interface AuthState {
   token: string | null;
@@ -8,8 +9,8 @@ interface AuthState {
   error: string | null;
 }
 
-const storedToken = localStorage.getItem("orchestra_token");
-const storedUser = localStorage.getItem("orchestra_user");
+const storedToken = localStorage.getItem(AUTH_TOKEN_KEY);
+const storedUser = localStorage.getItem(AUTH_USER_KEY);
 
 const initialState: AuthState = {
   token: storedToken,
@@ -51,32 +52,28 @@ const authSlice = createSlice({
         state.token = action.payload.token;
         state.user = action.payload.user;
         state.error = null;
-        localStorage.setItem("orchestra_token", action.payload.token);
-        localStorage.setItem("orchestra_user", JSON.stringify(action.payload.user));
+        setStoredAuth(action.payload.token, action.payload.user);
       })
       .addCase(login.rejected, (state, action) => {
         state.status = "failed";
         state.token = null;
         state.user = null;
         state.error = action.error.message ?? "Não foi possível fazer login.";
-        localStorage.removeItem("orchestra_token");
-        localStorage.removeItem("orchestra_user");
+        clearStoredAuth();
       })
       .addCase(logout.fulfilled, (state) => {
         state.status = "idle";
         state.token = null;
         state.user = null;
         state.error = null;
-        localStorage.removeItem("orchestra_token");
-        localStorage.removeItem("orchestra_user");
+        clearStoredAuth();
       })
       .addCase(logout.rejected, (state) => {
         state.status = "idle";
         state.token = null;
         state.user = null;
         state.error = null;
-        localStorage.removeItem("orchestra_token");
-        localStorage.removeItem("orchestra_user");
+        clearStoredAuth();
       });
   },
 });

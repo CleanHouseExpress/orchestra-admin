@@ -5,10 +5,12 @@ import {
   User, Hash, Briefcase, Zap, Star, Rocket, Search, ChevronDown
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { companiesApi } from "../services/companiesApi";
 
 export interface NovaEmpresaForm {
   name: string;
   cnpj: string;
+  domain: string;
   segment: string;
   site: string;
   description: string;
@@ -27,17 +29,39 @@ export interface NovaEmpresaForm {
   plan: string;
 }
 
+export const ORCHESTRA_DOMAIN_SUFFIX = ".orchestra.com";
+
 interface NovaEmpresaModalProps {
   onClose: () => void;
-  onSave: (data: NovaEmpresaForm) => Promise<void> | void;
+  onSave: (data: NovaEmpresaForm, onProgress: (event: CompanyCreationEvent) => void) => Promise<void> | void;
 }
+
+interface CompanyCreationEvent {
+  event: string;
+  data?: Record<string, unknown>;
+}
+
+const creationChecklist = [
+  { event: "started", label: "Iniciando criação" },
+  { event: "transaction_started", label: "Abrindo transação" },
+  { event: "company_created", label: "Criando empresa" },
+  { event: "address_saved", label: "Processando endereço" },
+  { event: "subdomain_saved", label: "Vinculando subdomínio" },
+  { event: "modules_synced", label: "Vinculando módulos" },
+  { event: "admin_created", label: "Criando administrador" },
+  { event: "tenant_provisioned", label: "Provisionando tenant" },
+  { event: "audit_logged", label: "Registrando auditoria" },
+  { event: "committed", label: "Confirmando transação" },
+  { event: "completed", label: "Cadastro concluído" },
+];
 
 const steps = [
   { id: 1, label: "Dados Básicos", icon: Building2, description: "Informações da empresa" },
-  { id: 2, label: "Endereço", icon: MapPin, description: "Localização e sede" },
-  { id: 3, label: "Contato", icon: Phone, description: "Responsável e canais" },
-  { id: 4, label: "Plano", icon: CreditCard, description: "Escolha o plano" },
-  { id: 5, label: "Revisão", icon: CheckCircle2, description: "Confirmar dados" },
+  { id: 2, label: "Domínio", icon: Globe, description: "Endereço de acesso" },
+  { id: 3, label: "Endereço", icon: MapPin, description: "Localização e sede" },
+  { id: 4, label: "Contato", icon: Phone, description: "Responsável e canais" },
+  { id: 5, label: "Plano", icon: CreditCard, description: "Escolha o plano" },
+  { id: 6, label: "Revisão", icon: CheckCircle2, description: "Confirmar dados" },
 ];
 
 const segmentos = ["Tecnologia", "Consultoria", "Indústria", "Finanças", "Varejo", "Marketing", "Saúde", "Logística", "Educação", "Outros"];
@@ -109,6 +133,25 @@ function maskPhone(value: string) {
     .replace(/(\d{5})(\d)/, "$1-$2");
 }
 
+function normalizeSubdomain(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//, "")
+    .replace(/\.orchestra\.com$/i, "")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
+
+function isValidSubdomain(value: string) {
+  return /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(value);
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 interface ViaCepResponse {
   erro?: boolean;
   logradouro?: string;
@@ -117,9 +160,9 @@ interface ViaCepResponse {
   uf?: string;
 }
 
-function InputField({ label, placeholder, value, onChange, type = "text", icon: Icon, required, hint, disabled }: {
+function InputField({ label, placeholder, value, onChange, onBlur, type = "text", icon: Icon, required, hint, disabled }: {
   label: string; placeholder: string; value: string; onChange: (v: string) => void;
-  type?: string; icon?: any; required?: boolean; hint?: string; disabled?: boolean;
+  onBlur?: () => void; type?: string; icon?: any; required?: boolean; hint?: string; disabled?: boolean;
 }) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
@@ -145,7 +188,10 @@ function InputField({ label, placeholder, value, onChange, type = "text", icon: 
           onChange={e => onChange(e.target.value)}
           disabled={disabled}
           onFocus={() => setFocused(true)}
-          onBlur={() => setFocused(false)}
+          onBlur={() => {
+            setFocused(false);
+            onBlur?.();
+          }}
           placeholder={placeholder}
           className="form-field-input flex-1 bg-transparent outline-none"
           style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter', sans-serif" }}
@@ -264,7 +310,60 @@ function SelectField({ label, value, onChange, options, icon: Icon, required, di
   );
 }
 
+function SubdomainField({ value, onChange, onBlur, error, hint }: {
+  value: string;
+  onChange: (v: string) => void;
+  onBlur?: () => void;
+  error?: string;
+  hint?: string;
+}) {
+  const { colors } = useTheme();
+  const [focused, setFocused] = useState(false);
+  const previewDomain = `${value || "empresa"}${ORCHESTRA_DOMAIN_SUFFIX}`;
+
+  return (
+    <div>
+      <label style={{ fontSize: "13px", color: colors.textSecondary, display: "block", marginBottom: "7px", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
+        Subdomínio<span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>
+      </label>
+      <div
+        className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
+        style={{
+          background: colors.inputBg,
+          border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : colors.border}`,
+          boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
+          height: "44px",
+        }}
+      >
+        <Globe size={15} style={{ color: focused ? "#3B82F6" : colors.textMuted }} className="shrink-0" />
+        <input
+          type="text"
+          value={value}
+          onChange={e => onChange(normalizeSubdomain(e.target.value))}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            onBlur?.();
+          }}
+          placeholder="empresa"
+          className="form-field-input min-w-0 flex-1 bg-transparent outline-none"
+          style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter', sans-serif" }}
+        />
+        <span className="shrink-0" style={{ fontSize: "14px", color: colors.textMuted, fontFamily: "'Inter', sans-serif" }}>
+          {ORCHESTRA_DOMAIN_SUFFIX}
+        </span>
+      </div>
+      <p style={{ fontSize: "11px", color: colors.textMuted, marginTop: "4px", fontFamily: "'Inter', sans-serif" }}>
+        {hint || `Exemplo: ${previewDomain}`}
+      </p>
+      {error && <p style={{ fontSize: "12px", color: "#EF4444", marginTop: "2px" }}>{error}</p>}
+    </div>
+  );
+}
+
 type ViaCepLockedFields = Partial<Record<"street" | "district" | "city" | "state", boolean>>;
+type EmailCheckStatus = "idle" | "checking" | "available" | "exists" | "invalid" | "failed";
+type DomainCheckStatus = "idle" | "checking" | "available" | "exists" | "invalid" | "failed";
 
 function ReviewRow({ label, value }: { label: string; value: string }) {
   const { colors } = useTheme();
@@ -277,6 +376,54 @@ function ReviewRow({ label, value }: { label: string; value: string }) {
   );
 }
 
+function CreationChecklist({ events, failed, running }: { events: CompanyCreationEvent[]; failed: boolean; running: boolean }) {
+  const { colors } = useTheme();
+  const receivedEvents = new Set(events.map(item => item.event));
+  const failedMessage = events.find(item => item.event === "failed")?.data?.message;
+  const nextEvent = creationChecklist.find(item => !receivedEvents.has(item.event))?.event;
+
+  return (
+    <div className="rounded-2xl p-4 space-y-3" style={{ background: colors.card, border: `1px solid ${colors.border}` }}>
+      <div className="flex items-center justify-between">
+        <span style={{ fontSize: "12px", color: colors.textPrimary, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+          Progresso do cadastro
+        </span>
+        <span style={{ fontSize: "12px", color: failed ? "#EF4444" : colors.textMuted }}>
+          {receivedEvents.size}/{creationChecklist.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {creationChecklist.map((item) => {
+          const done = receivedEvents.has(item.event);
+          const active = running && !failed && !done && nextEvent === item.event;
+
+          return (
+            <div key={item.event} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: done ? "rgba(16,185,129,0.08)" : colors.surface }}>
+              {done ? (
+                <CheckCircle2 size={14} style={{ color: "#10B981" }} className="shrink-0" />
+              ) : active ? (
+                <span className="rounded-full border-2 animate-spin shrink-0" style={{ width: "14px", height: "14px", borderColor: "rgba(59,130,246,0.2)", borderTopColor: "#3B82F6" }} />
+              ) : (
+                <span className="rounded-full shrink-0" style={{ width: "14px", height: "14px", border: `1px solid ${colors.border}` }} />
+              )}
+              <span style={{ fontSize: "12px", color: done ? colors.textPrimary : colors.textMuted }}>
+                {item.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {failed && (
+        <div className="rounded-xl px-3 py-2" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <span style={{ fontSize: "12px", color: "#EF4444" }}>{String(failedMessage || "Falha ao criar empresa.")}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
   const { colors, theme } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
@@ -284,13 +431,19 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
   const [saved, setSaved] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitError, setSubmitError] = useState("");
+  const [creationEvents, setCreationEvents] = useState<CompanyCreationEvent[]>([]);
+  const [creationStarted, setCreationStarted] = useState(false);
+  const [emailCheckStatus, setEmailCheckStatus] = useState<EmailCheckStatus>("idle");
+  const [lastCheckedEmail, setLastCheckedEmail] = useState("");
+  const [domainCheckStatus, setDomainCheckStatus] = useState<DomainCheckStatus>("idle");
+  const [lastCheckedDomain, setLastCheckedDomain] = useState("");
   const [cepLoading, setCepLoading] = useState(false);
   const [cepMessage, setCepMessage] = useState("");
   const [viaCepLockedFields, setViaCepLockedFields] = useState<ViaCepLockedFields>({});
 
   const [form, setForm] = useState<NovaEmpresaForm>({
     // Step 1
-    name: "", cnpj: "", segment: "", site: "", description: "",
+    name: "", cnpj: "", domain: "", segment: "", site: "", description: "",
     // Step 2
     cep: "", street: "", number: "", complement: "", district: "", city: "", state: "",
     // Step 3
@@ -299,7 +452,121 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
     plan: "",
   });
 
-  const set = (key: string) => (v: string) => setForm(f => ({ ...f, [key]: v }));
+  const set = (key: string) => (v: string) => {
+    if (key === "email") {
+      setEmailCheckStatus("idle");
+      setLastCheckedEmail("");
+    }
+
+    if (key === "domain") {
+      setDomainCheckStatus("idle");
+      setLastCheckedDomain("");
+    }
+
+    setForm(f => ({ ...f, [key]: v }));
+  };
+
+  const checkCompanyDomain = async () => {
+    const subdomain = form.domain.trim().toLowerCase();
+
+    if (!subdomain) {
+      setDomainCheckStatus("idle");
+      setLastCheckedDomain("");
+      setErrors(current => {
+        const nextErrors = { ...current };
+        delete nextErrors.domain;
+        return nextErrors;
+      });
+      return false;
+    }
+
+    if (!isValidSubdomain(subdomain)) {
+      setDomainCheckStatus("invalid");
+      setErrors(current => ({ ...current, domain: "Use apenas letras, números e hífen." }));
+      return false;
+    }
+
+    if (domainCheckStatus !== "idle" && lastCheckedDomain === subdomain) {
+      return domainCheckStatus === "available";
+    }
+
+    setDomainCheckStatus("checking");
+
+    try {
+      const result = await companiesApi.existsByDomain(subdomain);
+
+      setLastCheckedDomain(result.subdomain);
+
+      if (result.exists) {
+        setDomainCheckStatus("exists");
+        setErrors(current => ({ ...current, domain: "Este subdomínio já está em uso" }));
+        return false;
+      }
+
+      setDomainCheckStatus("available");
+      setErrors(current => {
+        const nextErrors = { ...current };
+        delete nextErrors.domain;
+        return nextErrors;
+      });
+      return true;
+    } catch {
+      setDomainCheckStatus("failed");
+      setErrors(current => ({ ...current, domain: "Não foi possível verificar este subdomínio" }));
+      return false;
+    }
+  };
+
+  const checkCompanyEmail = async () => {
+    const email = form.email.trim().toLowerCase();
+
+    if (!email) {
+      setEmailCheckStatus("idle");
+      setLastCheckedEmail("");
+      setErrors(current => {
+        const nextErrors = { ...current };
+        delete nextErrors.email;
+        return nextErrors;
+      });
+      return false;
+    }
+
+    if (!isValidEmail(email)) {
+      setEmailCheckStatus("invalid");
+      setErrors(current => ({ ...current, email: "Informe um e-mail válido" }));
+      return false;
+    }
+
+    if (emailCheckStatus !== "idle" && lastCheckedEmail === email) {
+      return emailCheckStatus === "available";
+    }
+
+    setEmailCheckStatus("checking");
+
+    try {
+      const result = await companiesApi.existsByEmail(email);
+
+      setLastCheckedEmail(email);
+
+      if (result.exists) {
+        setEmailCheckStatus("exists");
+        setErrors(current => ({ ...current, email: "Já existe uma empresa com este e-mail" }));
+        return false;
+      }
+
+      setEmailCheckStatus("available");
+      setErrors(current => {
+        const nextErrors = { ...current };
+        delete nextErrors.email;
+        return nextErrors;
+      });
+      return true;
+    } catch {
+      setEmailCheckStatus("failed");
+      setErrors(current => ({ ...current, email: "Não foi possível verificar este e-mail" }));
+      return false;
+    }
+  };
 
   useEffect(() => {
     const cep = onlyDigits(form.cep, 8);
@@ -365,41 +632,149 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
     return () => controller.abort();
   }, [form.cep]);
 
-  const validateStep = () => {
+  const validateStep = (step = currentStep) => {
     const e: Record<string, string> = {};
-    if (currentStep === 1) {
+    if (step === 1) {
       if (!form.name) e.name = "Nome obrigatório";
       if (!form.cnpj) e.cnpj = "CNPJ obrigatório";
       if (form.cnpj && onlyDigits(form.cnpj, 14).length !== 14) e.cnpj = "CNPJ deve ter 14 dígitos";
       if (!form.segment) e.segment = "Segmento obrigatório";
     }
-    if (currentStep === 3) {
+    if (step === 2) {
+      if (!form.domain) e.domain = "Subdomínio obrigatório";
+      if (form.domain && !isValidSubdomain(form.domain)) e.domain = "Use apenas letras, números e hífen.";
+      if (domainCheckStatus === "exists") e.domain = "Este subdomínio já está em uso";
+      if (domainCheckStatus === "failed") e.domain = "Não foi possível verificar este subdomínio";
+    }
+    if (step === 4) {
       if (!form.contactName) e.contactName = "Nome do responsável obrigatório";
       if (!form.email) e.email = "E-mail obrigatório";
+      if (form.email && !isValidEmail(form.email)) e.email = "Informe um e-mail válido";
+      if (emailCheckStatus === "exists") e.email = "Já existe uma empresa com este e-mail";
+      if (emailCheckStatus === "failed") e.email = "Não foi possível verificar este e-mail";
     }
-    if (currentStep === 4) {
+    if (step === 5) {
       if (!form.plan) e.plan = "Selecione um plano";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
-  const next = () => {
+  const canContinueCurrentStep = () => {
+    if (currentStep === 1) {
+      return Boolean(form.name && form.cnpj && onlyDigits(form.cnpj, 14).length === 14 && form.segment);
+    }
+
+    if (currentStep === 2) {
+      return Boolean(
+        form.domain &&
+        isValidSubdomain(form.domain) &&
+        domainCheckStatus === "available" &&
+        lastCheckedDomain === form.domain.trim().toLowerCase(),
+      );
+    }
+
+    if (currentStep === 4) {
+      return Boolean(
+        form.contactName &&
+        form.email &&
+        isValidEmail(form.email) &&
+        emailCheckStatus === "available" &&
+        lastCheckedEmail === form.email.trim().toLowerCase(),
+      );
+    }
+
+    if (currentStep === 5) {
+      return Boolean(form.plan);
+    }
+
+    if (currentStep === 6) {
+      return Boolean(
+        form.name &&
+        form.cnpj &&
+        onlyDigits(form.cnpj, 14).length === 14 &&
+        form.segment &&
+        form.domain &&
+        isValidSubdomain(form.domain) &&
+        domainCheckStatus === "available" &&
+        lastCheckedDomain === form.domain.trim().toLowerCase() &&
+        form.contactName &&
+        form.email &&
+        isValidEmail(form.email) &&
+        emailCheckStatus === "available" &&
+        lastCheckedEmail === form.email.trim().toLowerCase() &&
+        form.plan,
+      );
+    }
+
+    return true;
+  };
+
+  const validateAllRequiredSteps = async () => {
+    for (const step of [1, 2, 4, 5]) {
+      if (!validateStep(step)) {
+        setCurrentStep(step);
+        return false;
+      }
+
+      if (step === 4) {
+        const emailAvailable = await checkCompanyEmail();
+
+        if (!emailAvailable) {
+          setCurrentStep(4);
+          return false;
+        }
+      }
+
+      if (step === 2) {
+        const domainAvailable = await checkCompanyDomain();
+
+        if (!domainAvailable) {
+          setCurrentStep(2);
+          return false;
+        }
+      }
+    }
+
+    return true;
+  };
+
+  const next = async () => {
     if (!validateStep()) return;
-    setCurrentStep(s => Math.min(5, s + 1));
+
+    if (currentStep === 2) {
+      const domainAvailable = await checkCompanyDomain();
+
+      if (!domainAvailable) return;
+    }
+
+    if (currentStep === 4) {
+      const emailAvailable = await checkCompanyEmail();
+
+      if (!emailAvailable) return;
+    }
+
+    setCurrentStep(s => Math.min(steps.length, s + 1));
   };
 
   const back = () => setCurrentStep(s => Math.max(1, s - 1));
 
   const handleSave = async () => {
+    if (!(await validateAllRequiredSteps())) return;
+
     setSaving(true);
     setSubmitError("");
+    setCreationEvents([]);
+    setCreationStarted(true);
 
     try {
-      await onSave(form);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 120));
+
+      await onSave(form, (event) => {
+        setCreationEvents(current => [...current.filter(item => item.event !== event.event), event]);
+      });
       setSaving(false);
       setSaved(true);
-      window.setTimeout(onClose, 900);
     } catch (error) {
       setSaving(false);
       setSubmitError(error instanceof Error ? error.message : "Não foi possível cadastrar a empresa.");
@@ -407,6 +782,23 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
   };
 
   const selectedPlan = plans.find(p => p.id === form.plan);
+  const canContinue = canContinueCurrentStep();
+  const domainHint = {
+    idle: `Exemplo: ${form.domain || "empresa"}${ORCHESTRA_DOMAIN_SUFFIX}`,
+    checking: "Verificando subdomínio...",
+    available: `${form.domain}${ORCHESTRA_DOMAIN_SUFFIX} está disponível.`,
+    exists: "Este subdomínio já está em uso.",
+    invalid: "Use apenas letras, números e hífen.",
+    failed: "Não foi possível verificar este subdomínio.",
+  }[domainCheckStatus];
+  const emailHint = {
+    idle: "A verificação será feita ao sair do campo.",
+    checking: "Verificando e-mail...",
+    available: "E-mail disponível.",
+    exists: "Já existe uma empresa com este e-mail.",
+    invalid: "Informe um e-mail válido.",
+    failed: "Não foi possível verificar este e-mail.",
+  }[emailCheckStatus];
 
   return (
     <div
@@ -529,10 +921,11 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
               </div>
               <p style={{ fontSize: "12px", color: colors.textSecondary, lineHeight: 1.5 }}>
                 {currentStep === 1 && "O CNPJ deve estar no formato 00.000.000/0000-00 e será validado automaticamente."}
-                {currentStep === 2 && "Preencha o CEP para buscar o endereço automaticamente."}
-                {currentStep === 3 && "O responsável receberá as credenciais de acesso por e-mail após o cadastro."}
-                {currentStep === 4 && "Você pode alterar o plano a qualquer momento nas configurações da empresa."}
-                {currentStep === 5 && "Revise todos os dados antes de confirmar o cadastro."}
+                {currentStep === 2 && `Escolha apenas o prefixo. O endereço completo terminará em ${ORCHESTRA_DOMAIN_SUFFIX}.`}
+                {currentStep === 3 && "Preencha o CEP para buscar o endereço automaticamente."}
+                {currentStep === 4 && "O responsável receberá as credenciais de acesso por e-mail após o cadastro."}
+                {currentStep === 5 && "Você pode alterar o plano a qualquer momento nas configurações da empresa."}
+                {currentStep === 6 && "Revise todos os dados antes de confirmar o cadastro."}
               </p>
             </div>
           </div>
@@ -600,8 +993,31 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   </div>
                 )}
 
-                {/* ── STEP 2: Endereço ── */}
+                {/* ── STEP 2: Domínio ── */}
                 {currentStep === 2 && (
+                  <div className="space-y-5">
+                    <div
+                      className="rounded-xl p-4 flex items-start gap-3"
+                      style={{ background: colors.blueFaint, border: `1px solid rgba(59,130,246,0.15)` }}
+                    >
+                      <Globe size={16} style={{ color: "#3B82F6", marginTop: "1px" }} className="shrink-0" />
+                      <p style={{ fontSize: "13px", color: colors.textSecondary, lineHeight: 1.5 }}>
+                        Escolha o subdomínio que identificará a empresa na plataforma. O endereço completo será montado automaticamente com {ORCHESTRA_DOMAIN_SUFFIX}.
+                      </p>
+                    </div>
+
+                    <SubdomainField
+                      value={form.domain}
+                      onChange={set("domain")}
+                      onBlur={checkCompanyDomain}
+                      error={errors.domain}
+                      hint={domainHint}
+                    />
+                  </div>
+                )}
+
+                {/* ── STEP 3: Endereço ── */}
+                {currentStep === 3 && (
                   <div className="space-y-5">
                     <div className="grid grid-cols-3 gap-4">
                       <div>
@@ -634,8 +1050,8 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   </div>
                 )}
 
-                {/* ── STEP 3: Contato ── */}
-                {currentStep === 3 && (
+                {/* ── STEP 4: Contato ── */}
+                {currentStep === 4 && (
                   <div className="space-y-5">
                     <div
                       className="rounded-xl p-4 flex items-start gap-3"
@@ -656,7 +1072,17 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     </div>
 
                     <div>
-                      <InputField label="E-mail Corporativo" placeholder="joao@empresa.com.br" value={form.email} onChange={set("email")} icon={Mail} type="email" required />
+                      <InputField
+                        label="E-mail Corporativo"
+                        placeholder="joao@empresa.com.br"
+                        value={form.email}
+                        onChange={set("email")}
+                        onBlur={checkCompanyEmail}
+                        icon={Mail}
+                        type="email"
+                        required
+                        hint={emailHint}
+                      />
                       {errors.email && <p style={{ fontSize: "12px", color: "#EF4444", marginTop: "2px" }}>{errors.email}</p>}
                     </div>
 
@@ -667,8 +1093,8 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   </div>
                 )}
 
-                {/* ── STEP 4: Plano ── */}
-                {currentStep === 4 && (
+                {/* ── STEP 5: Plano ── */}
+                {currentStep === 5 && (
                   <div className="space-y-4">
                     {errors.plan && (
                       <div className="rounded-xl px-4 py-3 flex items-center gap-2" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)" }}>
@@ -747,9 +1173,28 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   </div>
                 )}
 
-                {/* ── STEP 5: Revisão ── */}
-                {currentStep === 5 && !saved && (
+                {/* ── STEP 6: Revisão ── */}
+                {currentStep === 6 && creationStarted && saving && !saved && (
+                  <div className="flex flex-col justify-center min-h-[520px] space-y-6">
+                    <div className="text-center space-y-2">
+                      <h3 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "24px", fontWeight: 600 }}>
+                        Cadastrando empresa
+                      </h3>
+                      <p style={{ fontSize: "14px", color: colors.textMuted }}>
+                        Acompanhe as etapas retornadas pela API em tempo real.
+                      </p>
+                    </div>
+
+                    <CreationChecklist events={creationEvents} failed={false} running={saving} />
+                  </div>
+                )}
+
+                {currentStep === 6 && !saved && !saving && (
                   <div className="space-y-6">
+                    {(creationStarted || creationEvents.length > 0) && (
+                      <CreationChecklist events={creationEvents} failed={Boolean(submitError)} running={saving} />
+                    )}
+
                     {[
                       {
                         title: "Dados Básicos",
@@ -757,6 +1202,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                         rows: [
                           { label: "Razão Social", value: form.name },
                           { label: "CNPJ", value: form.cnpj },
+                          { label: "Domínio", value: form.domain ? `${form.domain}${ORCHESTRA_DOMAIN_SUFFIX}` : "" },
                           { label: "Segmento", value: form.segment },
                           { label: "Site", value: form.site },
                           { label: "Descrição", value: form.description },
@@ -835,13 +1281,18 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     <p style={{ fontSize: "14px", color: colors.textMuted, textAlign: "center", maxWidth: "320px" }}>
                       <strong style={{ color: colors.textPrimary }}>{form.name}</strong> foi cadastrada com sucesso. O responsável receberá um convite por e-mail.
                     </p>
+                    {creationEvents.length > 0 && (
+                      <div className="w-full max-w-[520px]">
+                        <CreationChecklist events={creationEvents} failed={false} running={false} />
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </div>
 
             {/* Footer actions */}
-            {!saved && (
+            {!saved && !saving && (
               <div
                 className="flex items-center justify-between px-8 py-5 shrink-0"
                 style={{ borderTop: `1px solid ${colors.border}`, background: colors.navBg, backdropFilter: "blur(20px)" }}
@@ -871,7 +1322,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                 <div className="hidden md:flex items-center gap-3">
                   <span style={{ fontSize: "13px", color: submitError ? "#EF4444" : colors.textMuted }}>
                     {submitError || (
-                      currentStep < 5 ? `${5 - currentStep} passo${5 - currentStep > 1 ? "s" : ""} restante${5 - currentStep > 1 ? "s" : ""}` : "Pronto para cadastrar"
+                      currentStep < steps.length ? `${steps.length - currentStep} passo${steps.length - currentStep > 1 ? "s" : ""} restante${steps.length - currentStep > 1 ? "s" : ""}` : "Pronto para cadastrar"
                     )}
                   </span>
                 </div>
@@ -882,11 +1333,20 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   </span>
                 </div>
 
-                {currentStep < 5 ? (
+                {currentStep < steps.length ? (
                   <button
                     onClick={next}
-                    className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all hover:opacity-90"
-                    style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500, boxShadow: "0 4px 16px rgba(59,130,246,0.3)" }}
+                    className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all"
+                    style={{
+                      background: canContinue ? "linear-gradient(135deg, #3B82F6, #2563EB)" : colors.surface,
+                      color: canContinue ? "#fff" : colors.textMuted,
+                      fontSize: "14px",
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 500,
+                      border: canContinue ? "none" : `1px solid ${colors.border}`,
+                      boxShadow: canContinue ? "0 4px 16px rgba(59,130,246,0.3)" : "none",
+                      opacity: canContinue ? 1 : 0.72,
+                    }}
                   >
                     Próximo <ChevronRight size={15} />
                   </button>
@@ -895,7 +1355,16 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     onClick={handleSave}
                     disabled={saving}
                     className="flex items-center gap-2 rounded-xl px-6 py-2.5 transition-all hover:opacity-90 disabled:opacity-70"
-                    style={{ background: saving ? colors.surface : "linear-gradient(135deg, #10B981, #059669)", color: saving ? colors.textSecondary : "#fff", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500, border: saving ? `1px solid ${colors.border}` : "none", boxShadow: saving ? "none" : "0 4px 16px rgba(16,185,129,0.3)" }}
+                    style={{
+                      background: saving || !canContinue ? colors.surface : "linear-gradient(135deg, #10B981, #059669)",
+                      color: saving || !canContinue ? colors.textSecondary : "#fff",
+                      fontSize: "14px",
+                      fontFamily: "'Inter', sans-serif",
+                      fontWeight: 500,
+                      border: saving || !canContinue ? `1px solid ${colors.border}` : "none",
+                      boxShadow: saving || !canContinue ? "none" : "0 4px 16px rgba(16,185,129,0.3)",
+                      opacity: canContinue ? 1 : 0.72,
+                    }}
                   >
                     {saving ? (
                       <>
