@@ -9,6 +9,8 @@ import { EmpresaEditar } from "./components/EmpresaEditar";
 import { CaixaEmail } from "./components/CaixaEmail";
 import { Usuarios } from "./components/Usuarios";
 import { Configuracoes } from "./components/Configuracoes";
+import { Planos } from "./components/Planos";
+import { Contratos } from "./components/Contratos";
 import { Login } from "./components/Login";
 import { ThemeProvider, useTheme } from "./components/ThemeContext";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -18,7 +20,6 @@ import "../styles/fonts.css";
 const pageLabels: Record<string, string> = {
   dashboard: "Dashboard",
   companies: "Empresas",
-  clients: "Clientes",
   financial: "Financeiro",
   contracts: "Contratos",
   plans: "Planos",
@@ -31,7 +32,6 @@ const pageLabels: Record<string, string> = {
 const pageRoutes: Record<string, string> = {
   dashboard: "/dashboard",
   companies: "/empresas",
-  clients: "/clientes",
   financial: "/financeiro",
   contracts: "/contratos",
   plans: "/planos",
@@ -153,10 +153,9 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
             <Route path="/empresas" element={<Empresas />} />
             <Route path="/empresas/:id" element={<EmpresaDetalhe />} />
             <Route path="/empresas/:id/editar" element={<EmpresaEditar />} />
-            <Route path="/clientes" element={<EmptyPage title={pageLabels.clients} />} />
             <Route path="/financeiro" element={<EmptyPage title={pageLabels.financial} />} />
-            <Route path="/contratos" element={<EmptyPage title={pageLabels.contracts} />} />
-            <Route path="/planos" element={<EmptyPage title={pageLabels.plans} />} />
+            <Route path="/contratos" element={<Contratos />} />
+            <Route path="/planos" element={<Planos />} />
             <Route path="/relatorios" element={<EmptyPage title={pageLabels.reports} />} />
             <Route path="/emails" element={<CaixaEmail />} />
             <Route path="/usuarios" element={<Usuarios />} />

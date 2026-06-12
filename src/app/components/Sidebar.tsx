@@ -1,6 +1,6 @@
 import { useState } from "react";
 import {
-  LayoutDashboard, Building2, Users, Wallet, FileText,
+  LayoutDashboard, Building2, Wallet, FileText,
   CreditCard, BarChart3, UserCog, Settings, ChevronLeft,
   ChevronRight, Zap, LogOut, Mail
 } from "lucide-react";
@@ -12,9 +12,8 @@ import { getCompanyUserRoleLabel } from "../services/companiesApi";
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
   { icon: Building2, label: "Empresas", id: "companies" },
-  { icon: Users, label: "Clientes", id: "clients" },
-  { icon: Wallet, label: "Financeiro", id: "financial" },
   { icon: FileText, label: "Contratos", id: "contracts" },
+  { icon: Wallet, label: "Financeiro", id: "financial" },
   { icon: CreditCard, label: "Planos", id: "plans" },
   { icon: BarChart3, label: "Relatórios", id: "reports" },
   { icon: Mail, label: "Caixa de E-mail", id: "emails" },
