@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Building2, Shield, Bell, Link2, Palette, Globe, Database,
   ChevronRight, Plus, Pencil, Trash2, X, CheckCircle2,
@@ -7,6 +7,7 @@ import {
   Webhook, Key, RefreshCw, Download, Upload, Sliders
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { ApiDepartment, DepartmentPayload, departmentsApi } from "../services/departmentsApi";
 
 // ── Submenu config ─────────────────────────────────────────────────────
 const submenu = [
@@ -36,16 +37,16 @@ const colorOptions = [
   "#3B82F6","#14B8A6","#8B5CF6","#F59E0B","#10B981","#EF4444","#EC4899","#F97316","#06B6D4","#84CC16",
 ];
 
-const initialDepts: Departamento[] = [
-  { id: 1, name: "Tecnologia",    description: "Desenvolvimento e infraestrutura de TI",    manager: "João Dias",      userCount: 8,  color: "#3B82F6" },
-  { id: 2, name: "Financeiro",    description: "Gestão financeira, faturamento e cobranças", manager: "Ricardo Alves",  userCount: 4,  color: "#10B981" },
-  { id: 3, name: "Operações",     description: "Operações diárias e gerenciamento de fluxo", manager: "Mariana Santos", userCount: 6,  color: "#14B8A6" },
-  { id: 4, name: "Comercial",     description: "Vendas, prospecção e relacionamento",        manager: "Carlos Lima",    userCount: 5,  color: "#F59E0B" },
-  { id: 5, name: "Suporte",       description: "Atendimento ao cliente e help desk",         manager: "Ana Ferreira",   userCount: 7,  color: "#8B5CF6" },
-  { id: 6, name: "Marketing",     description: "Comunicação, marca e campanhas",             manager: "Camila Torres",  userCount: 3,  color: "#EC4899" },
-  { id: 7, name: "Contabilidade", description: "Escrituração contábil e obrigações fiscais", manager: "Bruno Oliveira", userCount: 2,  color: "#F97316" },
-  { id: 8, name: "Projetos",      description: "Gestão de projetos e entregas",              manager: "Pedro Costa",    userCount: 5,  color: "#06B6D4" },
-];
+function mapDepartment(dept: ApiDepartment): Departamento {
+  return {
+    id: dept.id,
+    name: dept.name,
+    description: dept.description ?? "",
+    manager: dept.manager ?? "",
+    userCount: dept.user_count ?? dept.users_count ?? dept.users?.length ?? 0,
+    color: dept.color ?? "#3B82F6",
+  };
+}
 
 // ── Field ──────────────────────────────────────────────────────────────
 function Field({ label, placeholder, value, onChange, icon: Icon, required, hint }: any) {
@@ -72,7 +73,7 @@ function Field({ label, placeholder, value, onChange, icon: Icon, required, hint
 }
 
 // ── Dept modal ─────────────────────────────────────────────────────────
-function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onClose: () => void; onSave: (d: any) => void }) {
+function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onClose: () => void; onSave: (d: DepartmentPayload) => Promise<void> }) {
   const { colors, theme } = useTheme();
   const isEdit = !!dept;
   const [form, setForm] = useState({
@@ -84,6 +85,7 @@ function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onCl
   const [errors, setErrors]   = useState<Record<string, string>>({});
   const [saving, setSaving]   = useState(false);
   const [saved, setSaved]     = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const set = (k: string) => (v: string) => setForm(f => ({ ...f, [k]: v }));
 
@@ -94,10 +96,20 @@ function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onCl
     return !Object.keys(e).length;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    setTimeout(() => { setSaving(false); setSaved(true); setTimeout(() => onSave(form), 900); }, 1200);
+    setSaveError("");
+
+    try {
+      await onSave(form);
+      setSaved(true);
+      window.setTimeout(onClose, 700);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar o departamento.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -155,6 +167,12 @@ function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onCl
               </div>
 
               <Field label="Responsável" placeholder="Nome do gestor..." value={form.manager} onChange={set("manager")} icon={Users} />
+              {saveError && (
+                <div className="flex items-start gap-2 rounded-xl px-3 py-2" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
+                  <AlertCircle size={14} style={{ color: "#EF4444", marginTop: "1px" }} className="shrink-0" />
+                  <p style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{saveError}</p>
+                </div>
+              )}
 
               {/* Color picker */}
               <div>
@@ -204,10 +222,21 @@ function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onCl
 }
 
 // ── Delete confirm ─────────────────────────────────────────────────────
-function DeleteDeptModal({ dept, onClose, onConfirm }: { dept: Departamento; onClose: () => void; onConfirm: () => void }) {
+function DeleteDeptModal({ dept, onClose, onConfirm }: { dept: Departamento; onClose: () => void; onConfirm: () => Promise<void> }) {
   const { colors } = useTheme();
   const [deleting, setDeleting] = useState(false);
-  const handle = () => { setDeleting(true); setTimeout(() => { setDeleting(false); onConfirm(); }, 900); };
+  const [deleteError, setDeleteError] = useState("");
+  const handle = async () => {
+    setDeleting(true);
+    setDeleteError("");
+
+    try {
+      await onConfirm();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Não foi possível remover o departamento.");
+      setDeleting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -242,6 +271,12 @@ function DeleteDeptModal({ dept, onClose, onConfirm }: { dept: Departamento; onC
             </p>
           </div>
         )}
+        {deleteError && (
+          <div className="flex items-start gap-2 p-3 rounded-xl mb-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
+            <AlertCircle size={14} style={{ color: "#EF4444", marginTop: "1px" }} className="shrink-0" />
+            <p style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{deleteError}</p>
+          </div>
+        )}
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 rounded-xl py-2.5 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
             Cancelar
@@ -264,23 +299,53 @@ function DeleteDeptModal({ dept, onClose, onConfirm }: { dept: Departamento; onC
 // ── Departamentos page ─────────────────────────────────────────────────
 function Departamentos() {
   const { colors, theme } = useTheme();
-  const [depts, setDepts]       = useState<Departamento[]>(initialDepts);
+  const [depts, setDepts]       = useState<Departamento[]>([]);
   const [search, setSearch]     = useState("");
   const [editDept, setEditDept] = useState<Departamento | null | "new">(null);
   const [delDept, setDelDept]   = useState<Departamento | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState("");
+
+  const loadDepartments = async () => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const departments = await departmentsApi.list();
+      setDepts(departments.map(mapDepartment));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Não foi possível carregar os departamentos.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadDepartments();
+  }, []);
 
   const filtered = depts.filter(d =>
     d.name.toLowerCase().includes(search.toLowerCase()) ||
     d.manager.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSave = (data: any) => {
+  const handleSave = async (data: DepartmentPayload) => {
     if (editDept === "new") {
-      setDepts(prev => [...prev, { id: prev.length + 1, userCount: 0, ...data }]);
+      const created = await departmentsApi.create(data);
+      setDepts(prev => [...prev, mapDepartment(created)]);
     } else if (editDept) {
-      setDepts(prev => prev.map(d => d.id === editDept.id ? { ...d, ...data } : d));
+      const updated = await departmentsApi.update(editDept.id, data);
+      setDepts(prev => prev.map(d => d.id === editDept.id ? mapDepartment(updated) : d));
     }
     setEditDept(null);
+  };
+
+  const handleDelete = async () => {
+    if (!delDept) return;
+
+    await departmentsApi.remove(delDept.id);
+    setDepts(prev => prev.filter(dept => dept.id !== delDept.id));
+    setDelDept(null);
   };
 
   const cardStyle = {
@@ -300,12 +365,25 @@ function Departamentos() {
           </p>
         </div>
         <button onClick={() => setEditDept("new")}
-          className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500, boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
+          className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90 whitespace-nowrap"
+          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
+          disabled={loading}
         >
-          <Plus size={15} /> Novo Departamento
+          <Plus size={16} /> Novo Departamento
         </button>
       </div>
+
+      {error && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
+          <div className="flex items-start gap-2">
+            <AlertCircle size={15} style={{ color: "#EF4444", marginTop: "1px" }} className="shrink-0" />
+            <p style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{error}</p>
+          </div>
+          <button onClick={loadDepartments} className="rounded-xl px-3 py-1.5 transition-all" style={{ fontSize: "12px", color: "#EF4444", background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
+            Tentar novamente
+          </button>
+        </div>
+      )}
 
       {/* Stats strip */}
       <div className="grid grid-cols-3 gap-4">
@@ -345,7 +423,12 @@ function Departamentos() {
           ))}
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <span className="rounded-full border-2 animate-spin" style={{ width: "24px", height: "24px", borderColor: `${colors.borderStrong}`, borderTopColor: "#3B82F6" }} />
+            <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Carregando departamentos...</p>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <Building2 size={28} style={{ color: colors.textMuted }} />
             <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Nenhum departamento encontrado</p>
@@ -411,7 +494,7 @@ function Departamentos() {
         <DeptModal dept={editDept === "new" ? null : editDept} onClose={() => setEditDept(null)} onSave={handleSave} />
       )}
       {delDept && (
-        <DeleteDeptModal dept={delDept} onClose={() => setDelDept(null)} onConfirm={() => { setDepts(p => p.filter(d => d.id !== delDept.id)); setDelDept(null); }} />
+        <DeleteDeptModal dept={delDept} onClose={() => setDelDept(null)} onConfirm={handleDelete} />
       )}
     </div>
   );
