@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Users, Plus, Search, X, Pencil, Trash2, Eye,
   ChevronDown, CheckCircle2, Clock, XCircle, Shield,
@@ -7,9 +7,10 @@ import {
   AlertCircle, CheckCheck, Key, RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { AdminUserMetrics, ApiAdminUser, usersApi } from "../services/usersApi";
 
 // ── Types ──────────────────────────────────────────────────────────────
-type UserRole   = "admin" | "gerente" | "financeiro" | "operacional" | "visualizador";
+type UserRole   = string;
 type UserStatus = "ativo" | "inativo" | "pendente";
 
 interface UserRecord {
@@ -18,6 +19,8 @@ interface UserRecord {
   email: string;
   phone: string;
   role: UserRole;
+  roleLabel: string;
+  roleKey: string;
   status: UserStatus;
   company: string;
   department: string;
@@ -27,24 +30,11 @@ interface UserRecord {
   twoFA: boolean;
 }
 
-// ── Mock data ──────────────────────────────────────────────────────────
-const initialUsers: UserRecord[] = [
-  { id: 1,  name: "João Dias",       email: "joao.dias@orquestra.io",    phone: "(11) 9 9999-0001", role: "admin",        status: "ativo",    company: "ORQUESTRA",       department: "Tecnologia",   avatar: "JD", since: "Mar 2022", lastAccess: "Hoje, 09:14",    twoFA: true  },
-  { id: 2,  name: "Mariana Santos",  email: "m.santos@alpha.com.br",     phone: "(11) 9 9888-0002", role: "gerente",      status: "ativo",    company: "Alpha Tecnologia", department: "Operações",    avatar: "MS", since: "Jun 2022", lastAccess: "Hoje, 08:30",    twoFA: true  },
-  { id: 3,  name: "Ricardo Alves",   email: "r.alves@alpha.com.br",      phone: "(11) 9 9777-0003", role: "financeiro",   status: "ativo",    company: "Alpha Tecnologia", department: "Financeiro",   avatar: "RA", since: "Jul 2022", lastAccess: "Ontem, 17:45",   twoFA: false },
-  { id: 4,  name: "Carlos Lima",     email: "c.lima@alpha.com.br",       phone: "(11) 9 9666-0004", role: "operacional",  status: "ativo",    company: "Alpha Tecnologia", department: "Suporte",      avatar: "CL", since: "Mai 2026", lastAccess: "Hoje, 10:02",    twoFA: false },
-  { id: 5,  name: "Patrícia Nunes",  email: "p.nunes@alpha.com.br",      phone: "(11) 9 9555-0005", role: "visualizador", status: "inativo",  company: "Alpha Tecnologia", department: "Comercial",    avatar: "PN", since: "Jan 2023", lastAccess: "15 Mai 2026",    twoFA: false },
-  { id: 6,  name: "Pedro Costa",     email: "p.costa@betasolutions.com", phone: "(21) 9 9444-0006", role: "gerente",      status: "ativo",    company: "Beta Solutions",   department: "Projetos",     avatar: "PC", since: "Jun 2022", lastAccess: "Hoje, 07:50",    twoFA: true  },
-  { id: 7,  name: "Ana Ferreira",    email: "a.ferreira@betasol.com",    phone: "(21) 9 9333-0007", role: "financeiro",   status: "pendente", company: "Beta Solutions",   department: "Financeiro",   avatar: "AF", since: "Abr 2026", lastAccess: "Nunca",          twoFA: false },
-  { id: 8,  name: "Lucas Mendes",    email: "l.mendes@gammacorp.com.br", phone: "(41) 9 9222-0008", role: "operacional",  status: "ativo",    company: "Gamma Corp",       department: "Engenharia",   avatar: "LM", since: "Set 2022", lastAccess: "Ontem, 14:22",   twoFA: true  },
-  { id: 9,  name: "Fernanda Rocha",  email: "f.rocha@deltasystems.io",   phone: "(31) 9 9111-0009", role: "admin",        status: "ativo",    company: "Delta Systems",    department: "TI",           avatar: "FR", since: "Jan 2023", lastAccess: "Hoje, 11:05",    twoFA: true  },
-  { id: 10, name: "Rodrigo Souza",   email: "r.souza@epsilongroup.com",  phone: "(51) 9 9000-0010", role: "visualizador", status: "inativo",  company: "Epsilon Group",    department: "Marketing",    avatar: "RS", since: "Fev 2023", lastAccess: "02 Jun 2026",    twoFA: false },
-  { id: 11, name: "Camila Torres",   email: "c.torres@thetadigital.co",  phone: "(71) 9 8999-0011", role: "gerente",      status: "ativo",    company: "Theta Digital",    department: "Design",       avatar: "CT", since: "Jul 2023", lastAccess: "Hoje, 08:15",    twoFA: false },
-  { id: 12, name: "Bruno Oliveira",  email: "b.oliveira@iotasaude.com",  phone: "(19) 9 8888-0012", role: "financeiro",   status: "ativo",    company: "Iota Saúde",       department: "Contabilidade",avatar: "BO", since: "Set 2023", lastAccess: "Ontem, 09:30",   twoFA: true  },
-];
-
 // ── Configs ────────────────────────────────────────────────────────────
-const roleConfig: Record<UserRole, { label: string; color: string; bg: string; icon: any }> = {
+const roleConfig: Record<string, { label: string; color: string; bg: string; icon: any }> = {
+  central_admin: { label: "Central Admin", color: "#6366F1", bg: "rgba(99,102,241,0.12)", icon: Shield },
+  company_admin: { label: "Company Admin", color: "#8B5CF6", bg: "rgba(139,92,246,0.12)", icon: UserCog },
+  sem_perfil: { label: "Sem perfil", color: "#94A3B8", bg: "rgba(148,163,184,0.12)", icon: Eye },
   admin:        { label: "Admin",        color: "#6366F1", bg: "rgba(99,102,241,0.12)",  icon: Shield   },
   gerente:      { label: "Gerente",      color: "#8B5CF6", bg: "rgba(139,92,246,0.12)",  icon: UserCog  },
   financeiro:   { label: "Financeiro",   color: "#10B981", bg: "rgba(16,185,129,0.12)",  icon: User     },
@@ -61,6 +51,59 @@ const statusConfig: Record<UserStatus, { label: string; color: string; bg: strin
 const roleOptions: UserRole[]   = ["admin","gerente","financeiro","operacional","visualizador"];
 const statusOptions: UserStatus[] = ["ativo","inativo","pendente"];
 const ITEMS_PER_PAGE = 8;
+
+function roleUi(role: string, label?: string) {
+  return roleConfig[role] ?? {
+    label: label || role.split(/[_-]+/).filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1)).join(" "),
+    color: "#6366F1",
+    bg: "rgba(99,102,241,0.12)",
+    icon: UserCog,
+  };
+}
+
+function initialsFor(name: string) {
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map(part => part[0])
+    .join("")
+    .toUpperCase() || "U";
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function mapApiUser(user: ApiAdminUser): UserRecord {
+  const roleKey = user.role.slug || user.role.legacy || "sem_perfil";
+  const roleLabel = user.role.name || roleUi(roleKey).label;
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    phone: "—",
+    role: roleKey,
+    roleKey,
+    roleLabel,
+    status: user.status === "active" ? "ativo" : "pendente",
+    company: user.company?.name || "ORQUESTRA",
+    department: user.department || "—",
+    avatar: initialsFor(user.name),
+    since: formatDate(user.created_at),
+    lastAccess: user.updated_at ? formatDate(user.updated_at) : "—",
+    twoFA: user.two_factor_enabled,
+  };
+}
+
+function LoadingBlock({ width = "100%", height = 12 }: { width?: string | number; height?: string | number }) {
+  const { colors } = useTheme();
+  return <div className="rounded-full animate-pulse" style={{ width, height, background: colors.hoverBg }} />;
+}
 
 // ── Avatar ─────────────────────────────────────────────────────────────
 function Avatar({ user, size = 36 }: { user: UserRecord; size?: number }) {
@@ -242,7 +285,7 @@ function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; on
                     value={form.role}
                     onChange={set("role")}
                     required
-                    options={roleOptions.map(r => ({ value: r, label: roleConfig[r].label }))}
+                    options={roleOptions.map(r => ({ value: r, label: roleUi(r).label }))}
                   />
                   {errors.role && <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "4px", fontFamily: "'Inter',sans-serif" }}>{errors.role}</p>}
                 </div>
@@ -314,7 +357,7 @@ function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; on
 // ── View modal ─────────────────────────────────────────────────────────
 function UserViewModal({ user, onClose, onEdit }: { user: UserRecord; onClose: () => void; onEdit: () => void }) {
   const { colors } = useTheme();
-  const role   = roleConfig[user.role];
+  const role   = roleUi(user.roleKey, user.roleLabel);
   const status = statusConfig[user.status];
 
   return (
@@ -461,49 +504,92 @@ function DeleteModal({ user, onClose, onConfirm }: { user: UserRecord; onClose: 
 // ── Main ───────────────────────────────────────────────────────────────
 export function Usuarios() {
   const { colors, theme } = useTheme();
-  const [users, setUsers]           = useState<UserRecord[]>(initialUsers);
+  const [users, setUsers]           = useState<UserRecord[]>([]);
+  const [metrics, setMetrics]       = useState<AdminUserMetrics | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
   const [search, setSearch]         = useState("");
-  const [roleFilter, setRoleFilter] = useState<UserRole | "todos">("todos");
+  const [roleFilter, setRoleFilter] = useState<string | "todos">("todos");
   const [statusFilter, setStatusFilter] = useState<UserStatus | "todos">("todos");
   const [page, setPage]             = useState(1);
   const [viewUser, setViewUser]     = useState<UserRecord | null>(null);
   const [editUser, setEditUser]     = useState<UserRecord | null | "new">(null);
   const [deleteUser, setDeleteUser] = useState<UserRecord | null>(null);
 
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+
+    const timeout = window.setTimeout(() => {
+      const params = {
+        search: search.trim() || undefined,
+        status: statusFilter === "todos" ? undefined : statusFilter,
+        role: roleFilter === "todos" ? undefined : roleFilter,
+        per_page: 100,
+      };
+
+      setError(null);
+
+      Promise.all([
+        usersApi.list(params),
+        usersApi.metrics(params),
+      ])
+        .then(([listResponse, metricsResponse]) => {
+          if (!active) return;
+          setUsers(listResponse.data.map(mapApiUser));
+          setMetrics(metricsResponse);
+        })
+        .catch((err: Error) => {
+          if (!active) return;
+          setUsers([]);
+          setMetrics(null);
+          setError(err.message || "Não foi possível carregar os usuários.");
+        })
+        .finally(() => {
+          if (active) setLoading(false);
+        });
+    }, 250);
+
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [search, roleFilter, statusFilter]);
+
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     const matchSearch = u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.company.toLowerCase().includes(q);
-    const matchRole   = roleFilter   === "todos" || u.role   === roleFilter;
+    const matchRole   = roleFilter   === "todos" || u.roleKey === roleFilter;
     const matchStatus = statusFilter === "todos" || u.status === statusFilter;
     return matchSearch && matchRole && matchStatus;
   });
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
   const handleSave = (data: any) => {
-    if (editUser === "new") {
-      const initials = data.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase();
-      setUsers(prev => [...prev, { id: prev.length + 1, avatar: initials, since: "Jun 2026", lastAccess: "Nunca", ...data }]);
-    } else if (editUser) {
-      setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...data, avatar: data.name.split(" ").map((n: string) => n[0]).slice(0, 2).join("").toUpperCase() } : u));
-    }
+    void data;
+    setError("Criação e edição de usuários ainda não estão disponíveis na API.");
     setEditUser(null);
     setViewUser(null);
   };
 
   const handleDelete = () => {
     if (!deleteUser) return;
-    setUsers(prev => prev.filter(u => u.id !== deleteUser.id));
+    setError("Remoção de usuários ainda não está disponível na API.");
     setDeleteUser(null);
   };
 
   const kpis = [
-    { label: "Total de Usuários", value: users.length,                            color: "#6366F1", icon: Users,      change: "+3 este mês",  positive: true  },
-    { label: "Usuários Ativos",   value: users.filter(u => u.status === "ativo").length,  color: "#10B981", icon: CheckCircle2, change: `${Math.round(users.filter(u=>u.status==="ativo").length/users.length*100)}% do total`, positive: true  },
-    { label: "Pendentes",         value: users.filter(u => u.status === "pendente").length, color: "#F59E0B", icon: Clock,     change: "aguardando acesso", positive: false },
-    { label: "Com 2FA ativo",     value: users.filter(u => u.twoFA).length,       color: "#8B5CF6", icon: Lock,      change: `${Math.round(users.filter(u=>u.twoFA).length/users.length*100)}% protegidos`, positive: true  },
+    { label: "Total de Usuários", value: metrics?.total_users ?? users.length, color: "#6366F1", icon: Users, change: "base principal", positive: true },
+    { label: "Usuários Ativos", value: metrics?.active_users ?? users.filter(u => u.status === "ativo").length, color: "#10B981", icon: CheckCircle2, change: `${metrics?.active_rate ?? 0}% do total`, positive: true },
+    { label: "Pendentes", value: metrics?.pending_users ?? users.filter(u => u.status === "pendente").length, color: "#F59E0B", icon: Clock, change: "aguardando verificação", positive: false },
+    { label: "Com 2FA ativo", value: metrics?.two_factor_enabled_users ?? users.filter(u => u.twoFA).length, color: "#8B5CF6", icon: Lock, change: `${metrics?.two_factor_rate ?? 0}% protegidos`, positive: true },
   ];
+
+  const roleBreakdown = metrics?.role_counts?.length
+    ? metrics.role_counts
+    : roleOptions.map(role => ({ role, name: roleUi(role).label, total: users.filter(user => user.roleKey === role).length }));
 
   const cardStyle = {
     background: colors.card,
@@ -529,9 +615,27 @@ export function Usuarios() {
         </button>
       </div>
 
+      {error && (
+        <div className="rounded-xl px-4 py-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "#F59E0B", fontSize: "13px", fontFamily: "'Inter',sans-serif" }}>
+          {error}
+        </div>
+      )}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {kpis.map(k => (
+        {loading && !metrics ? Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="rounded-2xl p-5" style={cardStyle}>
+            <div className="flex items-start justify-between mb-3">
+              <LoadingBlock width={38} height={38} />
+              <LoadingBlock width={42} height={18} />
+            </div>
+            <div className="space-y-2">
+              <LoadingBlock width="35%" height={26} />
+              <LoadingBlock width="70%" height={13} />
+              <LoadingBlock width="45%" height={11} />
+            </div>
+          </div>
+        )) : kpis.map(k => (
           <div key={k.label} className="rounded-2xl p-5 transition-all hover:translate-y-[-2px]" style={cardStyle}>
             <div className="flex items-start justify-between mb-3">
               <div className="rounded-xl flex items-center justify-center" style={{ width: "38px", height: "38px", background: `${k.color}15` }}>
@@ -550,9 +654,9 @@ export function Usuarios() {
 
       {/* Role breakdown pills */}
       <div className="flex flex-wrap gap-2">
-        {roleOptions.map(r => {
-          const rc = roleConfig[r];
-          const count = users.filter(u => u.role === r).length;
+        {roleBreakdown.map(({ role: r, name, total }) => {
+          const rc = roleUi(r, name);
+          const count = total;
           return (
             <button key={r} onClick={() => setRoleFilter(roleFilter === r ? "todos" : r)}
               className="flex items-center gap-2 rounded-xl px-3 py-2 transition-all"
@@ -612,13 +716,37 @@ export function Usuarios() {
           ))}
         </div>
 
-        {paginated.length === 0 ? (
+        {loading && users.length === 0 ? (
+          <div>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div
+                key={index}
+                className="grid items-center px-5 py-3.5"
+                style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px", borderBottom: index < 7 ? `1px solid ${colors.border}` : "none" }}
+              >
+                <div className="flex items-center gap-3">
+                  <LoadingBlock width={34} height={34} />
+                  <div className="space-y-2 flex-1">
+                    <LoadingBlock width="62%" height={13} />
+                    <LoadingBlock width="78%" height={11} />
+                  </div>
+                </div>
+                <LoadingBlock width="70%" height={12} />
+                <LoadingBlock width="58%" height={12} />
+                <LoadingBlock width={92} height={24} />
+                <LoadingBlock width={72} height={24} />
+                <LoadingBlock width={48} height={20} />
+                <LoadingBlock width={72} height={26} />
+              </div>
+            ))}
+          </div>
+        ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Users size={32} style={{ color: colors.textMuted }} />
             <p style={{ fontSize: "14px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Nenhum usuário encontrado</p>
           </div>
         ) : paginated.map((user, i) => {
-          const role   = roleConfig[user.role];
+          const role   = roleUi(user.roleKey, user.roleLabel);
           const status = statusConfig[user.status];
           const isLast = i === paginated.length - 1;
           return (

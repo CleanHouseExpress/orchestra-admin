@@ -8,6 +8,7 @@ import { EmpresaDetalhe } from "./components/EmpresaDetalhe";
 import { EmpresaEditar } from "./components/EmpresaEditar";
 import { CaixaEmail } from "./components/CaixaEmail";
 import { Usuarios } from "./components/Usuarios";
+import { Configuracoes } from "./components/Configuracoes";
 import { Login } from "./components/Login";
 import { ThemeProvider, useTheme } from "./components/ThemeContext";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -159,7 +160,7 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
             <Route path="/relatorios" element={<EmptyPage title={pageLabels.reports} />} />
             <Route path="/emails" element={<CaixaEmail />} />
             <Route path="/usuarios" element={<Usuarios />} />
-            <Route path="/configuracoes" element={<EmptyPage title={pageLabels.settings} />} />
+            <Route path="/configuracoes" element={<Configuracoes />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
         </main>
