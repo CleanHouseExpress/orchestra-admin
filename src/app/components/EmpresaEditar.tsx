@@ -67,8 +67,8 @@ function InputField({ label, value, onChange, icon: Icon, type = "text", require
       <label style={{ fontSize: 13, color: colors.textSecondary, display: "block", marginBottom: 7, fontWeight: 500 }}>
         {label}{required && <span style={{ color: "#EF4444", marginLeft: 3 }}>*</span>}
       </label>
-      <div className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200" style={{ background: disabled ? colors.surface : colors.inputBg, border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : error ? "#EF4444" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none", height: 44 }}>
-        {Icon && <Icon size={15} style={{ color: focused ? "#3B82F6" : colors.textMuted }} className="shrink-0" />}
+      <div className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200" style={{ background: disabled ? colors.surface : colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : error ? "#EF4444" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: 44 }}>
+        {Icon && <Icon size={15} style={{ color: focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
         <input type={type} value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)} onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} placeholder={placeholder} className="form-field-input flex-1 bg-transparent outline-none disabled:cursor-not-allowed" style={{ fontSize: 14, color: colors.textPrimary }} />
       </div>
       {error && <p style={{ fontSize: 12, color: "#EF4444", marginTop: 5 }}>{error}</p>}
@@ -87,8 +87,8 @@ function SearchableSelect({ label, value, onChange, options, icon: Icon, require
       <label style={{ fontSize: 13, color: colors.textSecondary, display: "block", marginBottom: 7, fontWeight: 500 }}>
         {label}{required && <span style={{ color: "#EF4444", marginLeft: 3 }}>*</span>}
       </label>
-      <button type="button" onClick={() => setOpen((next) => !next)} className="flex items-center gap-2.5 rounded-xl px-3.5 w-full transition-all duration-200" style={{ background: colors.inputBg, border: `1px solid ${open ? "rgba(59,130,246,0.55)" : colors.border}`, boxShadow: open ? "0 0 0 3px rgba(59,130,246,0.1)" : "none", height: 44 }}>
-        {Icon && <Icon size={15} style={{ color: open ? "#3B82F6" : colors.textMuted }} className="shrink-0" />}
+      <button type="button" onClick={() => setOpen((next) => !next)} className="flex items-center gap-2.5 rounded-xl px-3.5 w-full transition-all duration-200" style={{ background: colors.inputBg, border: `1px solid ${open ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: open ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: 44 }}>
+        {Icon && <Icon size={15} style={{ color: open ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
         <span className="flex-1 text-left" style={{ fontSize: 14, color: value ? colors.textPrimary : colors.textMuted }}>{value || "Selecionar..."}</span>
         <ChevronDown size={15} style={{ color: colors.textMuted }} />
       </button>
@@ -100,7 +100,7 @@ function SearchableSelect({ label, value, onChange, options, icon: Icon, require
           </div>
           <div className="max-h-[190px] overflow-y-auto py-1">
             {filtered.length ? filtered.map((option: string) => (
-              <button key={option} type="button" onClick={() => { onChange(option); setOpen(false); setQuery(""); }} className="w-full text-left px-3 py-2 transition-colors" style={{ fontSize: 13, color: option === value ? "#3B82F6" : colors.textSecondary, background: option === value ? "rgba(59,130,246,0.1)" : "transparent" }}>
+              <button key={option} type="button" onClick={() => { onChange(option); setOpen(false); setQuery(""); }} className="w-full text-left px-3 py-2 transition-colors" style={{ fontSize: 13, color: option === value ? "#6366F1" : colors.textSecondary, background: option === value ? "rgba(99,102,241,0.1)" : "transparent" }}>
                 {option}
               </button>
             )) : <p className="px-3 py-3" style={{ fontSize: 12, color: colors.textMuted }}>Nenhuma opção encontrada.</p>}
@@ -266,7 +266,7 @@ export function EmpresaEditar() {
           <span style={{ color: colors.textMuted }}>/</span>
           <span style={{ fontSize: 14, color: colors.textPrimary, fontWeight: 500 }}>{form.name}</span>
           <span style={{ color: colors.textMuted }}>/</span>
-          <span style={{ fontSize: 14, color: "#3B82F6", fontWeight: 500 }}>Editar</span>
+          <span style={{ fontSize: 14, color: "#6366F1", fontWeight: 500 }}>Editar</span>
         </div>
         <span className="hidden sm:flex items-center gap-1.5 rounded-full px-3 py-1" style={{ fontSize: 12, color: saved ? "#10B981" : "#F59E0B", background: saved ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.1)" }}>
           {saved ? <CheckCircle2 size={13} /> : <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#F59E0B" }} />}
@@ -278,15 +278,15 @@ export function EmpresaEditar() {
         <div className="hidden md:flex flex-col w-[260px] shrink-0 p-5 gap-2" style={{ background: colors.sidebarBg, borderRight: `1px solid ${colors.border}` }}>
           <p style={{ fontSize: 11, color: colors.textMuted, textTransform: "uppercase", marginBottom: 4 }}>Seções</p>
           <div className="rounded-full overflow-hidden mb-3" style={{ height: 3, background: colors.surface }}>
-            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(currentStep / steps.length) * 100}%`, background: "linear-gradient(90deg, #3B82F6, #14B8A6)" }} />
+            <div className="h-full rounded-full transition-all duration-500" style={{ width: `${(currentStep / steps.length) * 100}%`, background: "linear-gradient(90deg, #6366F1, #8B5CF6)" }} />
           </div>
           {steps.map((step) => {
             const isActive = currentStep === step.id;
             const isDone = currentStep > step.id;
             return (
-              <button key={step.id} onClick={() => setCurrentStep(step.id)} className="flex items-center gap-3 rounded-xl p-3 text-left transition-all duration-200" style={{ background: isActive ? (theme === "dark" ? "rgba(59,130,246,0.15)" : "rgba(59,130,246,0.08)") : "transparent", borderLeft: isActive ? "2px solid #3B82F6" : "2px solid transparent" }}>
-                <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: 32, height: 32, background: isDone ? "linear-gradient(135deg, #3B82F6, #14B8A6)" : isActive ? "rgba(59,130,246,0.15)" : colors.surface, border: `1px solid ${isActive ? "rgba(59,130,246,0.4)" : colors.border}` }}>
-                  {isDone ? <CheckCircle2 size={14} color="#fff" /> : <step.icon size={13} style={{ color: isActive ? "#3B82F6" : colors.textMuted }} />}
+              <button key={step.id} onClick={() => setCurrentStep(step.id)} className="flex items-center gap-3 rounded-xl p-3 text-left transition-all duration-200" style={{ background: isActive ? (theme === "dark" ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.08)") : "transparent", borderLeft: isActive ? "2px solid #6366F1" : "2px solid transparent" }}>
+                <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: 32, height: 32, background: isDone ? "linear-gradient(135deg, #6366F1, #8B5CF6)" : isActive ? "rgba(99,102,241,0.15)" : colors.surface, border: `1px solid ${isActive ? "rgba(99,102,241,0.4)" : colors.border}` }}>
+                  {isDone ? <CheckCircle2 size={14} color="#fff" /> : <step.icon size={13} style={{ color: isActive ? "#6366F1" : colors.textMuted }} />}
                 </div>
                 <div>
                   <p style={{ fontSize: 13, color: isActive ? colors.textPrimary : colors.textMuted, fontWeight: isActive ? 600 : 400 }}>{step.label}</p>
@@ -301,7 +301,7 @@ export function EmpresaEditar() {
           <div className="flex-1 overflow-y-auto px-6 md:px-8 py-8">
             <div className="max-w-[680px] mx-auto">
               <div className="mb-8">
-                <span style={{ fontSize: 12, color: "#3B82F6", fontWeight: 500 }}>Editando · Passo {currentStep} de {steps.length}</span>
+                <span style={{ fontSize: 12, color: "#6366F1", fontWeight: 500 }}>Editando · Passo {currentStep} de {steps.length}</span>
                 <h3 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: 22, fontWeight: 600, marginTop: 4 }}>{steps[currentStep - 1].label}</h3>
                 <p style={{ fontSize: 14, color: colors.textMuted, marginTop: 3 }}>{steps[currentStep - 1].description}</p>
               </div>
@@ -380,7 +380,7 @@ export function EmpresaEditar() {
             <button onClick={back} disabled={currentStep === 1} className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all disabled:opacity-30" style={{ color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontSize: 14 }}>
               <ChevronLeft size={15} /> Anterior
             </button>
-            <button onClick={currentStep < steps.length ? next : handleSave} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all hover:opacity-90 disabled:opacity-70" style={{ background: currentStep < steps.length ? "linear-gradient(135deg, #3B82F6, #2563EB)" : "linear-gradient(135deg, #10B981, #059669)", color: "#fff", fontSize: 14, fontWeight: 500 }}>
+            <button onClick={currentStep < steps.length ? next : handleSave} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all hover:opacity-90 disabled:opacity-70" style={{ background: currentStep < steps.length ? "linear-gradient(135deg, #6366F1, #4338CA)" : "#10B981", color: "#fff", fontSize: 14, fontWeight: 500 }}>
               {saving ? (
                 <>
                   <span className="rounded-full border-2 animate-spin" style={{ width: 14, height: 14, borderColor: "rgba(255,255,255,0.35)", borderTopColor: "#fff" }} />

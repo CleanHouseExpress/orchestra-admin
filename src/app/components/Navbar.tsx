@@ -82,7 +82,7 @@ export function Navbar() {
             <Bell size={17} />
             <span
               className="absolute top-2 right-2 rounded-full"
-              style={{ width: "8px", height: "8px", background: "#3B82F6", boxShadow: "0 0 6px rgba(59,130,246,0.6)" }}
+              style={{ width: "8px", height: "8px", background: "#6366F1", boxShadow: "0 0 6px rgba(99,102,241,0.6)" }}
             />
           </button>
           {showNotifs && (
@@ -100,7 +100,7 @@ export function Navbar() {
                 >
                   <div
                     className="mt-1 rounded-full shrink-0"
-                    style={{ width: "7px", height: "7px", background: n.unread ? "#3B82F6" : "transparent", border: n.unread ? "none" : `1px solid ${colors.textMuted}` }}
+                    style={{ width: "7px", height: "7px", background: n.unread ? "#6366F1" : "transparent", border: n.unread ? "none" : `1px solid ${colors.textMuted}` }}
                   />
                   <div>
                     <p style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter', sans-serif", lineHeight: 1.4 }}>{n.text}</p>
@@ -123,7 +123,7 @@ export function Navbar() {
           >
             <div
               className="rounded-full flex items-center justify-center"
-              style={{ width: "28px", height: "28px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)", fontSize: "12px", color: "#fff", fontWeight: 600 }}
+              style={{ width: "28px", height: "28px", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", fontSize: "12px", color: "#fff", fontWeight: 600 }}
             >
               JD
             </div>

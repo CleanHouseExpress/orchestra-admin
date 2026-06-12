@@ -9,6 +9,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { ApiCompanyUser, companiesApi, getCompanyUserRoleLabel, isCompanyAdminUser } from "../services/companiesApi";
 import { CompanyView, mapCompany } from "./companyView";
 import { useTheme } from "./ThemeContext";
+import { EmpresaEmails } from "./EmpresaEmails";
 
 const statusConfig = {
   ativo: { label: "Ativo", color: "#10B981", bg: "rgba(16,185,129,0.12)", icon: CheckCircle2 },
@@ -17,8 +18,8 @@ const statusConfig = {
 };
 
 const planConfig: Record<string, { color: string; bg: string }> = {
-  Enterprise: { color: "#3B82F6", bg: "rgba(59,130,246,0.12)" },
-  Pro: { color: "#14B8A6", bg: "rgba(20,184,166,0.12)" },
+  Enterprise: { color: "#6366F1", bg: "rgba(99,102,241,0.12)" },
+  Pro: { color: "#8B5CF6", bg: "rgba(139,92,246,0.12)" },
   Basic: { color: "#94A3B8", bg: "rgba(148,163,184,0.12)" },
 };
 
@@ -58,7 +59,7 @@ function CustomTooltip({ active, payload, label }: any) {
   return (
     <div className="rounded-xl px-4 py-3" style={{ background: colors.card, border: `1px solid ${colors.borderStrong}` }}>
       <p style={{ fontSize: 12, color: colors.textMuted, marginBottom: 4 }}>{label}</p>
-      <p style={{ fontSize: 13, color: "#3B82F6" }}>Receita: R$ {Number(payload[0].value).toLocaleString("pt-BR")}</p>
+      <p style={{ fontSize: 13, color: "#6366F1" }}>Receita: R$ {Number(payload[0].value).toLocaleString("pt-BR")}</p>
     </div>
   );
 }
@@ -73,6 +74,8 @@ function EmpresaDetalheView({ company, users, usersLoading, usersError }: {
   const navigate = useNavigate();
   const st = statusConfig[company.status];
   const pl = planConfig[company.plan] ?? planConfig.Basic;
+  const [activeTab, setActiveTab] = useState("Visão Geral");
+  const tabs = ["Visão Geral", "E-mails"];
   const cardStyle = {
     background: colors.card,
     border: `1px solid ${colors.border}`,
@@ -116,14 +119,34 @@ function EmpresaDetalheView({ company, users, usersLoading, usersError }: {
               </div>
             </div>
           </div>
+          <div className="flex gap-0 overflow-x-auto">
+            {tabs.map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className="px-5 py-3.5 transition-all shrink-0"
+                style={{
+                  fontSize: 13,
+                  fontWeight: activeTab === tab ? 600 : 400,
+                  color: activeTab === tab ? "#6366F1" : colors.textMuted,
+                  borderBottom: activeTab === tab ? "2px solid #6366F1" : "2px solid transparent",
+                  background: "transparent",
+                }}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="p-6 space-y-5">
+          {activeTab === "Visão Geral" ? (
+            <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
             {[
-              { label: "Receita", value: company.revenue, icon: DollarSign, color: "#3B82F6" },
-              { label: "Clientes", value: company.clients, icon: Users, color: "#14B8A6" },
-              { label: "Contratos", value: company.contracts, icon: FileText, color: "#8B5CF6" },
+              { label: "Receita", value: company.revenue, icon: DollarSign, color: "#6366F1" },
+              { label: "Clientes", value: company.clients, icon: Users, color: "#8B5CF6" },
+              { label: "Contratos", value: company.contracts, icon: FileText, color: "#6366F1" },
               { label: "Crescimento", value: `${company.growth > 0 ? "+" : ""}${company.growth}%`, icon: company.growth >= 0 ? TrendingUp : TrendingDown, color: company.growth >= 0 ? "#10B981" : "#EF4444" },
             ].map((item) => (
               <div key={item.label} className="rounded-2xl p-5" style={cardStyle}>
@@ -143,15 +166,15 @@ function EmpresaDetalheView({ company, users, usersLoading, usersError }: {
                 <AreaChart data={monthlyRevenue} margin={{ top: 8, right: 8, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="companyRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.22} />
-                      <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#6366F1" stopOpacity={0.22} />
+                      <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
                   <XAxis dataKey="month" tick={{ fill: colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={(v) => `${Number(v) / 1000}k`} />
                   <Tooltip content={<CustomTooltip />} />
-                  <Area type="monotone" dataKey="value" stroke="#3B82F6" strokeWidth={2} fill="url(#companyRevenue)" />
+                  <Area type="monotone" dataKey="value" stroke="#6366F1" strokeWidth={2} fill="url(#companyRevenue)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -206,7 +229,7 @@ function EmpresaDetalheView({ company, users, usersLoading, usersError }: {
                     <p style={{ fontSize: 14, color: colors.textPrimary, fontWeight: 500 }}>{user.name}</p>
                     <p style={{ fontSize: 12, color: colors.textMuted }}>{user.email}</p>
                   </div>
-                  <span className="rounded-full px-2.5 py-1" style={{ fontSize: 11, color: isAdmin ? "#3B82F6" : colors.textSecondary, background: isAdmin ? "rgba(59,130,246,0.1)" : colors.surface }}>
+                  <span className="rounded-full px-2.5 py-1" style={{ fontSize: 11, color: isAdmin ? "#6366F1" : colors.textSecondary, background: isAdmin ? "rgba(99,102,241,0.1)" : colors.surface }}>
                     {getCompanyUserRoleLabel(user)}
                   </span>
                 </div>
@@ -218,6 +241,10 @@ function EmpresaDetalheView({ company, users, usersLoading, usersError }: {
               </div>
             )}
           </div>
+            </>
+          ) : (
+            <EmpresaEmails />
+          )}
         </div>
       </div>
     </div>

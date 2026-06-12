@@ -57,7 +57,7 @@ export function Login({ onLogin }: LoginProps) {
           style={{
             top: "-120px", left: "-120px",
             width: "480px", height: "480px",
-            background: "radial-gradient(circle, rgba(59,130,246,0.12) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)",
             borderRadius: "50%",
           }}
         />
@@ -66,7 +66,7 @@ export function Login({ onLogin }: LoginProps) {
           style={{
             bottom: "-80px", right: "-80px",
             width: "360px", height: "360px",
-            background: "radial-gradient(circle, rgba(20,184,166,0.08) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(139,92,246,0.08) 0%, transparent 70%)",
             borderRadius: "50%",
           }}
         />
@@ -83,7 +83,7 @@ export function Login({ onLogin }: LoginProps) {
         <div className="flex items-center gap-3 relative z-10">
           <div
             className="flex items-center justify-center rounded-xl"
-            style={{ width: "40px", height: "40px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)", boxShadow: "0 0 24px rgba(59,130,246,0.35)" }}
+            style={{ width: "40px", height: "40px", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", boxShadow: "0 0 24px rgba(99,102,241,0.35)" }}
           >
             <Zap size={20} color="#fff" fill="#fff" />
           </div>
@@ -98,7 +98,7 @@ export function Login({ onLogin }: LoginProps) {
             <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "36px", fontWeight: 600, lineHeight: 1.25 }}>
               Controle total.
               <br />
-              <span style={{ background: "linear-gradient(90deg, #3B82F6, #14B8A6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
+              <span style={{ background: "linear-gradient(90deg, #6366F1, #8B5CF6)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
                 Decisões precisas.
               </span>
             </h2>
@@ -108,9 +108,9 @@ export function Login({ onLogin }: LoginProps) {
           </div>
           <div className="space-y-3">
             {[
-              { label: "Dashboard executivo em tempo real", color: "#3B82F6" },
+              { label: "Dashboard executivo em tempo real", color: "#6366F1" },
               { label: "Gestão financeira integrada", color: colors.teal },
-              { label: "Relatórios estratégicos automatizados", color: "#8B5CF6" },
+              { label: "Relatórios estratégicos automatizados", color: "#6366F1" },
             ].map((f) => (
               <div key={f.label} className="flex items-center gap-3">
                 <div className="rounded-full shrink-0" style={{ width: "6px", height: "6px", background: f.color, boxShadow: `0 0 8px ${f.color}` }} />
@@ -138,7 +138,7 @@ export function Login({ onLogin }: LoginProps) {
           style={{
             top: "50%", left: "50%", transform: "translate(-50%, -50%)",
             width: "500px", height: "500px",
-            background: "radial-gradient(circle, rgba(59,130,246,0.05) 0%, transparent 70%)",
+            background: "radial-gradient(circle, rgba(99,102,241,0.05) 0%, transparent 70%)",
             borderRadius: "50%",
           }}
         />
@@ -146,7 +146,7 @@ export function Login({ onLogin }: LoginProps) {
         <div className="w-full max-w-[420px] relative z-10">
           {/* Mobile logo */}
           <div className="flex lg:hidden items-center gap-3 mb-10 justify-center">
-            <div className="flex items-center justify-center rounded-xl" style={{ width: "36px", height: "36px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)", boxShadow: "0 0 20px rgba(59,130,246,0.3)" }}>
+            <div className="flex items-center justify-center rounded-xl" style={{ width: "36px", height: "36px", background: "linear-gradient(135deg, #6366F1, #8B5CF6)", boxShadow: "0 0 20px rgba(99,102,241,0.3)" }}>
               <Zap size={18} color="#fff" fill="#fff" />
             </div>
             <span style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "20px", fontWeight: 600, letterSpacing: "0.04em" }}>
@@ -173,12 +173,12 @@ export function Login({ onLogin }: LoginProps) {
                 className="flex items-center gap-3 rounded-xl px-4 transition-all duration-200"
                 style={{
                   background: colors.inputBg,
-                  border: `1px solid ${focusedField === "email" ? "rgba(59,130,246,0.5)" : colors.border}`,
-                  boxShadow: focusedField === "email" ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
+                  border: `1px solid ${focusedField === "email" ? "rgba(99,102,241,0.5)" : colors.border}`,
+                  boxShadow: focusedField === "email" ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
                   height: "48px",
                 }}
               >
-                <Mail size={16} style={{ color: focusedField === "email" ? "#3B82F6" : colors.textMuted }} className="shrink-0" />
+                <Mail size={16} style={{ color: focusedField === "email" ? "#6366F1" : colors.textMuted }} className="shrink-0" />
                 <input
                   type="email"
                   value={email}
@@ -196,7 +196,7 @@ export function Login({ onLogin }: LoginProps) {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label style={{ fontSize: "13px", color: colors.textSecondary, fontWeight: 500 }}>Senha</label>
-                <button type="button" style={{ fontSize: "12px", color: "#3B82F6" }} className="hover:opacity-80 transition-opacity">
+                <button type="button" style={{ fontSize: "12px", color: "#6366F1" }} className="hover:opacity-80 transition-opacity">
                   Esqueceu a senha?
                 </button>
               </div>
@@ -204,12 +204,12 @@ export function Login({ onLogin }: LoginProps) {
                 className="flex items-center gap-3 rounded-xl px-4 transition-all duration-200"
                 style={{
                   background: colors.inputBg,
-                  border: `1px solid ${focusedField === "password" ? "rgba(59,130,246,0.5)" : colors.border}`,
-                  boxShadow: focusedField === "password" ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
+                  border: `1px solid ${focusedField === "password" ? "rgba(99,102,241,0.5)" : colors.border}`,
+                  boxShadow: focusedField === "password" ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
                   height: "48px",
                 }}
               >
-                <Lock size={16} style={{ color: focusedField === "password" ? "#3B82F6" : colors.textMuted }} className="shrink-0" />
+                <Lock size={16} style={{ color: focusedField === "password" ? "#6366F1" : colors.textMuted }} className="shrink-0" />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -240,18 +240,17 @@ export function Login({ onLogin }: LoginProps) {
               className="w-full flex items-center justify-center gap-2 rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
               style={{
                 height: "48px",
-                background: loading ? colors.surface : "linear-gradient(135deg, #3B82F6, #2563EB)",
+                background: loading ? colors.surface : "linear-gradient(135deg, #6366F1, #4338CA)",
                 color: loading ? colors.textSecondary : "#fff",
                 fontSize: "15px",
                 fontWeight: 500,
                 border: loading ? `1px solid ${colors.border}` : "none",
-                boxShadow: loading ? "none" : "0 4px 20px rgba(59,130,246,0.3)",
                 marginTop: "8px",
               }}
             >
               {loading ? (
                 <>
-                  <span className="rounded-full border-2 animate-spin" style={{ width: "16px", height: "16px", borderColor: "rgba(59,130,246,0.2)", borderTopColor: "#3B82F6" }} />
+                  <span className="rounded-full border-2 animate-spin" style={{ width: "16px", height: "16px", borderColor: "rgba(99,102,241,0.2)", borderTopColor: "#6366F1" }} />
                   <span>Autenticando...</span>
                 </>
               ) : (
@@ -289,9 +288,9 @@ export function Login({ onLogin }: LoginProps) {
 
           <p className="text-center mt-8" style={{ fontSize: "12px", color: colors.textMuted }}>
             Ao acessar, você concorda com os{" "}
-            <span style={{ color: "#3B82F6", cursor: "pointer" }}>Termos de Uso</span>
+            <span style={{ color: "#6366F1", cursor: "pointer" }}>Termos de Uso</span>
             {" "}e a{" "}
-            <span style={{ color: "#3B82F6", cursor: "pointer" }}>Política de Privacidade</span>.
+            <span style={{ color: "#6366F1", cursor: "pointer" }}>Política de Privacidade</span>.
           </p>
         </div>
       </div>

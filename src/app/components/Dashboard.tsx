@@ -25,7 +25,7 @@ const revenueData = [
 ];
 
 const contractsData = [
-  { name: "Ativo", value: 68, color: "#3B82F6" },
+  { name: "Ativo", value: 68, color: "#6366F1" },
   { name: "Pendente", value: 18, color: "#F59E0B" },
   { name: "Encerrado", value: 14, color: "#94A3B8" },
 ];
@@ -89,9 +89,9 @@ export function Dashboard() {
   const { colors, theme } = useTheme();
 
   const iconColors: Record<string, string> = {
-    blue: "#3B82F6",
+    blue: "#6366F1",
     teal: colors.teal,
-    purple: "#8B5CF6",
+    purple: "#6366F1",
     yellow: colors.yellow,
   };
 
@@ -128,7 +128,7 @@ export function Dashboard() {
           </div>
           <button
             className="rounded-xl px-4 py-2 transition-all duration-200 hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", fontSize: "13px", color: "#fff", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
+            style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", fontSize: "13px", color: "#fff", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
           >
             Exportar Relatório
           </button>
@@ -195,7 +195,7 @@ export function Dashboard() {
               </p>
             </div>
             <div className="flex items-center gap-4">
-              {[{ label: "Receita", color: "#3B82F6" }, { label: "Despesa", color: colors.textMuted }].map((l) => (
+              {[{ label: "Receita", color: "#6366F1" }, { label: "Despesa", color: colors.textMuted }].map((l) => (
                 <span key={l.label} className="flex items-center gap-1.5" style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter', sans-serif" }}>
                   <span className="w-2.5 h-2.5 rounded-full" style={{ background: l.color }} />{l.label}
                 </span>
@@ -206,8 +206,8 @@ export function Dashboard() {
             <AreaChart data={revenueData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="receitaGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3B82F6" stopOpacity={theme === "dark" ? 0.25 : 0.15} />
-                  <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#6366F1" stopOpacity={theme === "dark" ? 0.25 : 0.15} />
+                  <stop offset="95%" stopColor="#6366F1" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="despesaGrad" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor={colors.textMuted} stopOpacity={0.15} />
@@ -218,7 +218,7 @@ export function Dashboard() {
               <XAxis dataKey="month" tick={{ fill: colors.textMuted, fontSize: 12, fontFamily: "'Inter', sans-serif" }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: colors.textMuted, fontSize: 11, fontFamily: "'Inter', sans-serif" }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v / 1000}k`} />
               <Tooltip content={<CustomTooltip />} />
-              <Area type="monotone" dataKey="receita" name="Receita" stroke="#3B82F6" strokeWidth={2} fill="url(#receitaGrad)" />
+              <Area type="monotone" dataKey="receita" name="Receita" stroke="#6366F1" strokeWidth={2} fill="url(#receitaGrad)" />
               <Area type="monotone" dataKey="despesa" name="Despesa" stroke={colors.textMuted} strokeWidth={2} fill="url(#despesaGrad)" />
             </AreaChart>
           </ResponsiveContainer>
@@ -278,7 +278,7 @@ export function Dashboard() {
             <h3 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "17px" }}>
               Atividades
             </h3>
-            <button style={{ fontSize: "12px", color: "#3B82F6", fontFamily: "'Inter', sans-serif" }}>Ver todas</button>
+            <button style={{ fontSize: "12px", color: "#6366F1", fontFamily: "'Inter', sans-serif" }}>Ver todas</button>
           </div>
           <div className="space-y-4">
             {recentActivities.map((a) => (
@@ -389,7 +389,7 @@ export function Dashboard() {
             <XAxis dataKey="day" tick={{ fill: colors.textMuted, fontSize: 12, fontFamily: "'Inter', sans-serif" }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fill: colors.textMuted, fontSize: 11 }} axisLine={false} tickLine={false} />
             <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="value" name="Operações" fill="#3B82F6" radius={[6, 6, 0, 0]} opacity={theme === "dark" ? 0.85 : 0.9} />
+            <Bar dataKey="value" name="Operações" fill="#6366F1" radius={[6, 6, 0, 0]} opacity={theme === "dark" ? 0.85 : 0.9} />
           </BarChart>
         </ResponsiveContainer>
       </div>

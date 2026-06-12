@@ -85,7 +85,7 @@ const plans = [
     price: "R$ 799",
     period: "/mês",
     description: "Para empresas em crescimento que precisam de mais controle",
-    color: "#14B8A6",
+    color: "#8B5CF6",
     badge: "Mais popular",
     features: ["Até 100 usuários", "Contratos ilimitados", "Relatórios avançados", "Integrações via API", "Suporte prioritário"],
   },
@@ -96,7 +96,7 @@ const plans = [
     price: "Sob consulta",
     period: "",
     description: "Solução completa para grandes operações corporativas",
-    color: "#3B82F6",
+    color: "#6366F1",
     features: ["Usuários ilimitados", "Contratos ilimitados", "Dashboard personalizado", "SLA garantido", "Gerente dedicado", "Onboarding completo"],
   },
 ];
@@ -175,13 +175,13 @@ function InputField({ label, placeholder, value, onChange, onBlur, type = "text"
         className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
         style={{
           background: colors.inputBg,
-          border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : colors.border}`,
-          boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
+          border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`,
+          boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
           opacity: disabled ? 0.72 : 1,
           height: "44px",
         }}
       >
-        {Icon && <Icon size={15} style={{ color: focused ? "#3B82F6" : colors.textMuted }} className="shrink-0" />}
+        {Icon && <Icon size={15} style={{ color: focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
         <input
           type={type}
           value={value}
@@ -236,13 +236,13 @@ function SelectField({ label, value, onChange, options, icon: Icon, required, di
         className="w-full flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200 text-left"
         style={{
           background: colors.inputBg,
-          border: `1px solid ${open || focused ? "rgba(59,130,246,0.55)" : colors.border}`,
-          boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
+          border: `1px solid ${open || focused ? "rgba(99,102,241,0.55)" : colors.border}`,
+          boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
           opacity: disabled ? 0.72 : 1,
           height: "44px",
         }}
       >
-        {Icon && <Icon size={15} style={{ color: open || focused ? "#3B82F6" : colors.textMuted }} className="shrink-0" />}
+        {Icon && <Icon size={15} style={{ color: open || focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
         <span className="flex-1 truncate" style={{ fontSize: "14px", color: value ? colors.textPrimary : colors.textMuted, fontFamily: "'Inter', sans-serif" }}>
           {value || "Selecionar..."}
         </span>
@@ -286,8 +286,8 @@ function SelectField({ label, value, onChange, options, icon: Icon, required, di
                   }}
                   className="w-full flex items-center justify-between px-3 py-2.5 transition-all text-left"
                   style={{
-                    background: selected ? "rgba(59,130,246,0.12)" : "transparent",
-                    color: selected ? "#3B82F6" : colors.textSecondary,
+                    background: selected ? "rgba(99,102,241,0.12)" : "transparent",
+                    color: selected ? "#6366F1" : colors.textSecondary,
                     fontSize: "13px",
                     fontFamily: "'Inter', sans-serif",
                   }}
@@ -299,7 +299,7 @@ function SelectField({ label, value, onChange, options, icon: Icon, required, di
                   }}
                 >
                   <span>{option}</span>
-                  {selected && <CheckCircle2 size={14} style={{ color: "#3B82F6" }} />}
+                  {selected && <CheckCircle2 size={14} style={{ color: "#6366F1" }} />}
                 </button>
               );
             })}
@@ -330,12 +330,12 @@ function SubdomainField({ value, onChange, onBlur, error, hint }: {
         className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
         style={{
           background: colors.inputBg,
-          border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : colors.border}`,
-          boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none",
+          border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`,
+          boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none",
           height: "44px",
         }}
       >
-        <Globe size={15} style={{ color: focused ? "#3B82F6" : colors.textMuted }} className="shrink-0" />
+        <Globe size={15} style={{ color: focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />
         <input
           type="text"
           value={value}
@@ -403,7 +403,7 @@ function CreationChecklist({ events, failed, running }: { events: CompanyCreatio
               {done ? (
                 <CheckCircle2 size={14} style={{ color: "#10B981" }} className="shrink-0" />
               ) : active ? (
-                <span className="rounded-full border-2 animate-spin shrink-0" style={{ width: "14px", height: "14px", borderColor: "rgba(59,130,246,0.2)", borderTopColor: "#3B82F6" }} />
+                <span className="rounded-full border-2 animate-spin shrink-0" style={{ width: "14px", height: "14px", borderColor: "rgba(99,102,241,0.2)", borderTopColor: "#6366F1" }} />
               ) : (
                 <span className="rounded-full shrink-0" style={{ width: "14px", height: "14px", border: `1px solid ${colors.border}` }} />
               )}
@@ -822,7 +822,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
           <div className="flex items-center gap-3">
             <div
               className="flex items-center justify-center rounded-xl"
-              style={{ width: "34px", height: "34px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)" }}
+              style={{ width: "34px", height: "34px", background: "linear-gradient(135deg, #6366F1, #8B5CF6)" }}
             >
               <Building2 size={16} color="#fff" />
             </div>
@@ -861,7 +861,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
             <div className="rounded-full overflow-hidden mb-4" style={{ height: "4px", background: colors.surface }}>
               <div
                 className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`, background: "linear-gradient(90deg, #3B82F6, #14B8A6)" }}
+                style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%`, background: "linear-gradient(90deg, #6366F1, #8B5CF6)" }}
               />
             </div>
 
@@ -876,10 +876,10 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   style={{
                     background: isActive
                       ? theme === "dark"
-                        ? "linear-gradient(135deg, rgba(59,130,246,0.15), rgba(20,184,166,0.08))"
-                        : "rgba(59,130,246,0.08)"
+                        ? "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.08))"
+                        : "rgba(99,102,241,0.08)"
                       : "transparent",
-                    borderLeft: isActive ? "2px solid #3B82F6" : "2px solid transparent",
+                    borderLeft: isActive ? "2px solid #6366F1" : "2px solid transparent",
                     cursor: isDone ? "pointer" : "default",
                   }}
                 >
@@ -888,16 +888,16 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     style={{
                       width: "34px", height: "34px",
                       background: isDone
-                        ? "linear-gradient(135deg, #3B82F6, #14B8A6)"
+                        ? "linear-gradient(135deg, #6366F1, #8B5CF6)"
                         : isActive
-                          ? "rgba(59,130,246,0.15)"
+                          ? "rgba(99,102,241,0.15)"
                           : colors.surface,
-                      border: isActive ? "1px solid rgba(59,130,246,0.4)" : `1px solid ${colors.border}`,
+                      border: isActive ? "1px solid rgba(99,102,241,0.4)" : `1px solid ${colors.border}`,
                     }}
                   >
                     {isDone
                       ? <CheckCircle2 size={16} color="#fff" />
-                      : <step.icon size={15} style={{ color: isActive ? "#3B82F6" : colors.textMuted }} />
+                      : <step.icon size={15} style={{ color: isActive ? "#6366F1" : colors.textMuted }} />
                     }
                   </div>
                   <div>
@@ -913,11 +913,11 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
             {/* Tips */}
             <div
               className="mt-auto rounded-xl p-4"
-              style={{ background: colors.blueFaint, border: `1px solid rgba(59,130,246,0.15)` }}
+              style={{ background: colors.blueFaint, border: `1px solid rgba(99,102,241,0.15)` }}
             >
               <div className="flex items-center gap-2 mb-2">
-                <AlertCircle size={13} style={{ color: "#3B82F6" }} />
-                <span style={{ fontSize: "12px", color: "#3B82F6", fontWeight: 600 }}>Dica</span>
+                <AlertCircle size={13} style={{ color: "#6366F1" }} />
+                <span style={{ fontSize: "12px", color: "#6366F1", fontWeight: 600 }}>Dica</span>
               </div>
               <p style={{ fontSize: "12px", color: colors.textSecondary, lineHeight: 1.5 }}>
                 {currentStep === 1 && "O CNPJ deve estar no formato 00.000.000/0000-00 e será validado automaticamente."}
@@ -937,7 +937,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                 {/* Step header */}
                 <div className="mb-8">
                   <div className="flex items-center gap-2 mb-1">
-                    <span style={{ fontSize: "12px", color: "#3B82F6", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
+                    <span style={{ fontSize: "12px", color: "#6366F1", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>
                       Passo {currentStep} de {steps.length}
                     </span>
                   </div>
@@ -986,7 +986,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                           fontFamily: "'Inter', sans-serif",
                           lineHeight: 1.6,
                         }}
-                        onFocus={e => (e.target.style.border = "1px solid rgba(59,130,246,0.55)")}
+                        onFocus={e => (e.target.style.border = "1px solid rgba(99,102,241,0.55)")}
                         onBlur={e => (e.target.style.border = `1px solid ${colors.border}`)}
                       />
                     </div>
@@ -998,9 +998,9 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   <div className="space-y-5">
                     <div
                       className="rounded-xl p-4 flex items-start gap-3"
-                      style={{ background: colors.blueFaint, border: `1px solid rgba(59,130,246,0.15)` }}
+                      style={{ background: colors.blueFaint, border: `1px solid rgba(99,102,241,0.15)` }}
                     >
-                      <Globe size={16} style={{ color: "#3B82F6", marginTop: "1px" }} className="shrink-0" />
+                      <Globe size={16} style={{ color: "#6366F1", marginTop: "1px" }} className="shrink-0" />
                       <p style={{ fontSize: "13px", color: colors.textSecondary, lineHeight: 1.5 }}>
                         Escolha o subdomínio que identificará a empresa na plataforma. O endereço completo será montado automaticamente com {ORCHESTRA_DOMAIN_SUFFIX}.
                       </p>
@@ -1055,9 +1055,9 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   <div className="space-y-5">
                     <div
                       className="rounded-xl p-4 flex items-start gap-3"
-                      style={{ background: colors.blueFaint, border: `1px solid rgba(59,130,246,0.15)` }}
+                      style={{ background: colors.blueFaint, border: `1px solid rgba(99,102,241,0.15)` }}
                     >
-                      <AlertCircle size={15} style={{ color: "#3B82F6", marginTop: "1px" }} className="shrink-0" />
+                      <AlertCircle size={15} style={{ color: "#6366F1", marginTop: "1px" }} className="shrink-0" />
                       <p style={{ fontSize: "13px", color: colors.textSecondary, lineHeight: 1.5 }}>
                         O responsável cadastrado receberá um convite por e-mail para acessar a plataforma com permissão de Administrador da empresa.
                       </p>
@@ -1235,7 +1235,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                           className="flex items-center gap-2 px-5 py-3"
                           style={{ background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)", borderBottom: `1px solid ${colors.border}` }}
                         >
-                          <section.icon size={14} style={{ color: "#3B82F6" }} />
+                          <section.icon size={14} style={{ color: "#6366F1" }} />
                           <span style={{ fontSize: "12px", color: colors.textPrimary, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
                             {section.title}
                           </span>
@@ -1314,7 +1314,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     <div
                       key={s.id}
                       className="rounded-full transition-all"
-                      style={{ width: currentStep === s.id ? "20px" : "6px", height: "6px", background: currentStep >= s.id ? "#3B82F6" : colors.border }}
+                      style={{ width: currentStep === s.id ? "20px" : "6px", height: "6px", background: currentStep >= s.id ? "#6366F1" : colors.border }}
                     />
                   ))}
                 </div>
@@ -1338,13 +1338,12 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     onClick={next}
                     className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all"
                     style={{
-                      background: canContinue ? "linear-gradient(135deg, #3B82F6, #2563EB)" : colors.surface,
+                      background: canContinue ? "linear-gradient(135deg, #6366F1, #4338CA)" : colors.surface,
                       color: canContinue ? "#fff" : colors.textMuted,
                       fontSize: "14px",
                       fontFamily: "'Inter', sans-serif",
                       fontWeight: 500,
                       border: canContinue ? "none" : `1px solid ${colors.border}`,
-                      boxShadow: canContinue ? "0 4px 16px rgba(59,130,246,0.3)" : "none",
                       opacity: canContinue ? 1 : 0.72,
                     }}
                   >
@@ -1368,7 +1367,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                   >
                     {saving ? (
                       <>
-                        <span className="rounded-full border-2 animate-spin" style={{ width: "14px", height: "14px", borderColor: "rgba(59,130,246,0.2)", borderTopColor: "#3B82F6" }} />
+                        <span className="rounded-full border-2 animate-spin" style={{ width: "14px", height: "14px", borderColor: "rgba(99,102,241,0.2)", borderTopColor: "#6366F1" }} />
                         Cadastrando...
                       </>
                     ) : (

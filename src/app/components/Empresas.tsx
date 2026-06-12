@@ -27,8 +27,8 @@ const statusConfig = {
 };
 
 const planConfig = {
-  Enterprise: { color: "#3B82F6", bg: "rgba(59,130,246,0.12)" },
-  Pro: { color: "#14B8A6", bg: "rgba(20,184,166,0.12)" },
+  Enterprise: { color: "#6366F1", bg: "rgba(99,102,241,0.12)" },
+  Pro: { color: "#8B5CF6", bg: "rgba(139,92,246,0.12)" },
   Basic: { color: "#94A3B8", bg: "rgba(148,163,184,0.12)" },
 };
 
@@ -146,7 +146,7 @@ function DetailModal({ company, onClose, onDetail, onEdit }: { company: CompanyV
           <button
             onClick={onDetail}
             className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all"
-            style={{ fontSize: "13px", color: "#fff", fontFamily: "'Inter', sans-serif", background: "linear-gradient(135deg, #3B82F6, #2563EB)" }}
+            style={{ fontSize: "13px", color: "#fff", fontFamily: "'Inter', sans-serif", background: "linear-gradient(135deg, #6366F1, #4338CA)" }}
           >
             Ver detalhes completos <ArrowUpRight size={14} />
           </button>
@@ -247,9 +247,9 @@ export function Empresas() {
   };
 
   const kpis = [
-    { label: "Total de Empresas", value: metrics?.total_companies ?? 0, sub: "cadastradas", positive: true, icon: Building2, color: "#3B82F6" },
+    { label: "Total de Empresas", value: metrics?.total_companies ?? 0, sub: "cadastradas", positive: true, icon: Building2, color: "#6366F1" },
     { label: "Empresas Ativas", value: metrics?.active_companies ?? 0, sub: "cadastradas", positive: true, icon: CheckCircle2, color: "#10B981" },
-    { label: "Receita Total", value: formatCurrency(metrics?.total_revenue ?? 0), sub: "base filtrada", positive: true, icon: DollarSign, color: "#14B8A6" },
+    { label: "Receita Total", value: formatCurrency(metrics?.total_revenue ?? 0), sub: "base filtrada", positive: true, icon: DollarSign, color: "#8B5CF6" },
     { label: "Pendentes", value: metrics?.pending_companies ?? 0, sub: "aguardando ativação", positive: false, icon: Clock, color: "#F59E0B" },
   ];
 
@@ -270,7 +270,7 @@ export function Empresas() {
         <button
           onClick={() => setShowNovaEmpresa(true)}
           className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500, boxShadow: "0 4px 16px rgba(59,130,246,0.3)" }}
+          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
         >
           <Plus size={16} /> Nova Empresa
         </button>
@@ -285,7 +285,7 @@ export function Empresas() {
                 <div className="rounded-xl" style={{ width: "38px", height: "38px", background: colors.hoverBg }} />
                 <div
                   className="rounded-full border-2 animate-spin"
-                  style={{ width: "18px", height: "18px", borderColor: "rgba(59,130,246,0.18)", borderTopColor: "#3B82F6" }}
+                  style={{ width: "18px", height: "18px", borderColor: "rgba(99,102,241,0.18)", borderTopColor: "#6366F1" }}
                 />
               </div>
               <div className="rounded-full mb-3" style={{ width: "72px", height: "22px", background: colors.hoverBg }} />
@@ -355,8 +355,8 @@ export function Empresas() {
                 className="appearance-none rounded-xl px-3 py-2 pr-8 outline-none cursor-pointer transition-all"
                 style={{
                   background: colors.surface,
-                  border: `1px solid ${f.value !== "Todos" ? "#3B82F6" : colors.border}`,
-                  color: f.value !== "Todos" ? "#3B82F6" : colors.textSecondary,
+                  border: `1px solid ${f.value !== "Todos" ? "#6366F1" : colors.border}`,
+                  color: f.value !== "Todos" ? "#6366F1" : colors.textSecondary,
                   fontSize: "13px",
                   fontFamily: "'Inter', sans-serif",
                 }}
@@ -414,7 +414,7 @@ export function Empresas() {
                 ))}
                 <div
                   className="rounded-full border-2 animate-spin"
-                  style={{ width: "18px", height: "18px", borderColor: "rgba(59,130,246,0.18)", borderTopColor: "#3B82F6" }}
+                  style={{ width: "18px", height: "18px", borderColor: "rgba(99,102,241,0.18)", borderTopColor: "#6366F1" }}
                 />
               </div>
             ))}
@@ -499,7 +499,7 @@ export function Empresas() {
                     className="rounded-lg p-1.5 transition-all opacity-0 group-hover:opacity-100"
                     style={{ color: colors.textMuted, background: colors.surface }}
                     onClick={e => { e.stopPropagation(); setSelected(company.id); }}
-                    onMouseEnter={e => (e.currentTarget.style.color = "#3B82F6")}
+                    onMouseEnter={e => (e.currentTarget.style.color = "#6366F1")}
                     onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}
                   >
                     <Eye size={14} />
@@ -536,9 +536,9 @@ export function Empresas() {
                   style={{
                     width: "32px", height: "32px", fontSize: "13px",
                     fontFamily: "'Inter', sans-serif",
-                    background: n === page ? "#3B82F6" : colors.surface,
+                    background: n === page ? "#6366F1" : colors.surface,
                     color: n === page ? "#fff" : colors.textSecondary,
-                    border: `1px solid ${n === page ? "#3B82F6" : colors.border}`,
+                    border: `1px solid ${n === page ? "#6366F1" : colors.border}`,
                     fontWeight: n === page ? 600 : 400,
                   }}
                 >

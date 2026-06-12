@@ -79,9 +79,9 @@ Evitar:
 
 | Uso            | Cor       |
 | -------------- | --------- |
-| Primária       | `#3B82F6` |
-| Accent premium | `#14B8A6` |
-| Hover          | `#2563EB` |
+| Primária       | `#6366F1` |
+| Accent premium | `#8B5CF6` |
+| Hover          | `#4338CA` |
 | Success        | `#10B981` |
 | Warning        | `#F59E0B` |
 | Danger         | `#EF4444` |

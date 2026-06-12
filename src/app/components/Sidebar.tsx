@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Building2, Users, Wallet, FileText,
   CreditCard, BarChart3, UserCog, Settings, ChevronLeft,
-  ChevronRight, Zap, LogOut
+  ChevronRight, Zap, LogOut, Mail
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { logout } from "../store/authSlice";
@@ -17,6 +17,7 @@ const navItems = [
   { icon: FileText, label: "Contratos", id: "contracts" },
   { icon: CreditCard, label: "Planos", id: "plans" },
   { icon: BarChart3, label: "Relatórios", id: "reports" },
+  { icon: Mail, label: "Caixa de E-mail", id: "emails" },
   { icon: UserCog, label: "Usuários", id: "users" },
   { icon: Settings, label: "Configurações", id: "settings" },
 ];
@@ -61,8 +62,7 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
           className="shrink-0 flex items-center justify-center rounded-xl"
           style={{
             width: "36px", height: "36px",
-            background: "linear-gradient(135deg, #3B82F6 0%, #14B8A6 100%)",
-            boxShadow: "0 0 20px rgba(59,130,246,0.3)",
+            background: "linear-gradient(135deg, #6366F1, #4338CA)",
           }}
         >
           <Zap size={18} color="#fff" fill="#fff" />
@@ -87,15 +87,15 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
                 width: "calc(100% - 16px)",
                 background: isActive
                   ? theme === "dark"
-                    ? "linear-gradient(135deg, rgba(59,130,246,0.15) 0%, rgba(20,184,166,0.08) 100%)"
-                    : "linear-gradient(135deg, rgba(59,130,246,0.1) 0%, rgba(20,184,166,0.05) 100%)"
+                    ? "linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.08) 100%)"
+                    : "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)"
                   : "transparent",
-                borderLeft: isActive ? `2px solid #3B82F6` : "2px solid transparent",
+                borderLeft: isActive ? `2px solid #6366F1` : "2px solid transparent",
                 color: isActive ? colors.textPrimary : colors.textSecondary,
               }}
               title={collapsed ? label : undefined}
             >
-              <Icon size={18} style={{ color: isActive ? "#3B82F6" : colors.textMuted }} className="shrink-0" />
+              <Icon size={18} style={{ color: isActive ? "#6366F1" : colors.textMuted }} className="shrink-0" />
               {!collapsed && (
                 <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: isActive ? 500 : 400 }}>
                   {label}
@@ -127,7 +127,7 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
         <div className="flex items-center gap-3">
           <div
             className="shrink-0 rounded-full flex items-center justify-center"
-            style={{ width: "32px", height: "32px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)", fontSize: "13px", color: "#fff", fontWeight: 600 }}
+            style={{ width: "32px", height: "32px", background: "linear-gradient(135deg, #6366F1, #4338CA)", fontSize: "13px", color: "#fff", fontWeight: 600 }}
           >
             {initials}
           </div>

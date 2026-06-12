@@ -6,6 +6,8 @@ import { Dashboard } from "./components/Dashboard";
 import { Empresas } from "./components/Empresas";
 import { EmpresaDetalhe } from "./components/EmpresaDetalhe";
 import { EmpresaEditar } from "./components/EmpresaEditar";
+import { CaixaEmail } from "./components/CaixaEmail";
+import { Usuarios } from "./components/Usuarios";
 import { Login } from "./components/Login";
 import { ThemeProvider, useTheme } from "./components/ThemeContext";
 import { ThemeToggle } from "./components/ThemeToggle";
@@ -20,6 +22,7 @@ const pageLabels: Record<string, string> = {
   contracts: "Contratos",
   plans: "Planos",
   reports: "Relatórios",
+  emails: "Caixa de E-mail",
   users: "Usuários",
   settings: "Configurações",
 };
@@ -32,6 +35,7 @@ const pageRoutes: Record<string, string> = {
   contracts: "/contratos",
   plans: "/planos",
   reports: "/relatorios",
+  emails: "/emails",
   users: "/usuarios",
   settings: "/configuracoes",
 };
@@ -60,7 +64,7 @@ function EmptyPage({ title }: { title: string }) {
         </p>
         <button
           className="mt-2 rounded-xl px-5 py-2 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500 }}
+          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: 500 }}
         >
           Solicitar acesso antecipado
         </button>
@@ -78,7 +82,7 @@ function RouteProgress({ active }: { active: boolean }) {
       <div
         className="h-full w-1/2"
         style={{
-          background: "linear-gradient(90deg, #3B82F6, #14B8A6)",
+          background: "linear-gradient(90deg, #6366F1, #8B5CF6)",
           animation: active ? "route-progress 0.8s ease-in-out infinite" : "none",
         }}
       />
@@ -153,7 +157,8 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
             <Route path="/contratos" element={<EmptyPage title={pageLabels.contracts} />} />
             <Route path="/planos" element={<EmptyPage title={pageLabels.plans} />} />
             <Route path="/relatorios" element={<EmptyPage title={pageLabels.reports} />} />
-            <Route path="/usuarios" element={<EmptyPage title={pageLabels.users} />} />
+            <Route path="/emails" element={<CaixaEmail />} />
+            <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/configuracoes" element={<EmptyPage title={pageLabels.settings} />} />
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>
