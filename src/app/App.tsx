@@ -182,8 +182,10 @@ function AppRoutes() {
 }
 
 export default function App() {
+  const authToken = useAppSelector((state) => state.auth.token);
+
   return (
-    <ThemeProvider>
+    <ThemeProvider authToken={authToken}>
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>

@@ -8,8 +8,9 @@ import {
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { DefaultButton } from "./ui/default-button";
-import { AdminUserMetrics, ApiAdminUser, usersApi } from "../services/usersApi";
+import { AdminUserMetrics, AdminUserPayload, ApiAdminUser, usersApi } from "../services/usersApi";
 import { departmentsApi } from "../services/departmentsApi";
+import { AccessProfile, accessProfilesApi } from "../services/accessProfilesApi";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type UserRole   = string;
@@ -50,10 +51,16 @@ const statusConfig: Record<UserStatus, { label: string; color: string; bg: strin
   pendente: { label: "Pendente", color: "#F59E0B", bg: "rgba(245,158,11,0.12)",  icon: Clock        },
 };
 
-const roleOptions: UserRole[]   = ["admin","gerente","financeiro","operacional","visualizador"];
 const statusOptions: UserStatus[] = ["ativo","inativo","pendente"];
 const ITEMS_PER_PAGE = 8;
 const fallbackDepartmentOptions = ["Administrativo", "Comercial", "Financeiro", "Jurídico", "Marketing", "Operações", "RH", "Suporte", "TI"];
+
+function mapProfileOption(profile: AccessProfile) {
+  return {
+    value: profile.slug,
+    label: profile.name,
+  };
+}
 
 function roleUi(role: string, label?: string) {
   return roleConfig[role] ?? {
@@ -97,17 +104,36 @@ function mapApiUser(user: ApiAdminUser): UserRecord {
     id: user.id,
     name: user.name,
     email: user.email,
-    phone: "—",
+    phone: user.phone || "—",
     role: roleKey,
     roleKey,
     roleLabel,
-    status: user.status === "active" ? "ativo" : "pendente",
+    status: user.status === "active" ? "ativo" : user.status === "inactive" ? "inativo" : "pendente",
     company: user.company?.name || "ORQUESTRA",
     department: user.department || "—",
     avatar: initialsFor(user.name),
     since: formatDate(user.created_at),
     lastAccess: user.updated_at ? formatDate(user.updated_at) : "—",
     twoFA: user.two_factor_enabled,
+  };
+}
+
+function toApiStatus(status: UserStatus) {
+  return status === "ativo" ? "active" : status === "pendente" ? "pending" : "inactive";
+}
+
+function toUserPayload(data: any): AdminUserPayload {
+  const department = data.department && data.department !== "—" ? data.department : null;
+
+  return {
+    name: data.name,
+    email: data.email,
+    phone: data.phone && data.phone !== "—" ? data.phone : null,
+    company: "Orchestra",
+    department,
+    all_departments: !department,
+    role: data.role,
+    status: toApiStatus(data.status),
   };
 }
 
@@ -130,22 +156,24 @@ function Avatar({ user, size = 36 }: { user: UserRecord; size?: number }) {
 }
 
 // ── Field ──────────────────────────────────────────────────────────────
-function Field({ label, placeholder, value, onChange, type = "text", icon: Icon, required, mask, inputMode, maxLength }: any) {
+function Field({ label, placeholder, value, onChange, type = "text", icon: Icon, required, mask, inputMode, maxLength, disabled }: any) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
-  const handleChange = (raw: string) => onChange(mask ? mask(raw) : raw);
+  const handleChange = (raw: string) => {
+    if (!disabled) onChange(mask ? mask(raw) : raw);
+  };
   return (
     <div>
       <label style={{ fontSize: "13px", color: colors.textSecondary, display: "block", marginBottom: "7px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
         {label}{required && <span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>}
       </label>
       <div className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
-        style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px" }}
+        style={{ background: disabled ? colors.surface : colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px", opacity: disabled ? 0.78 : 1 }}
       >
         {Icon && <Icon size={15} style={{ color: focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
         <input type={type} value={value} onChange={e => handleChange(e.target.value)}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          placeholder={placeholder} inputMode={inputMode} maxLength={maxLength} className="flex-1 bg-transparent outline-none"
+          onFocus={() => !disabled && setFocused(true)} onBlur={() => setFocused(false)}
+          placeholder={placeholder} inputMode={inputMode} maxLength={maxLength} disabled={disabled} className="flex-1 bg-transparent outline-none disabled:cursor-not-allowed"
           style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif" }}
         />
       </div>
@@ -216,24 +244,26 @@ function SelectField({ label, value, onChange, options, required }: any) {
 }
 
 // ── User Form Modal (create + edit) ────────────────────────────────────
-function UserFormModal({ user, departments, onClose, onSave }: { user?: UserRecord | null; departments: string[]; onClose: () => void; onSave: (data: any) => void }) {
+function UserFormModal({ user, departments, roles, onClose, onSave }: { user?: UserRecord | null; departments: string[]; roles: Array<{ value: string; label: string }>; onClose: () => void; onSave: (data: any) => Promise<void> }) {
   const { colors, theme } = useTheme();
   const isEdit = !!user;
+  const systemCompany = "Orchestra";
 
   const [form, setForm] = useState({
     name:       user?.name       ?? "",
     email:      user?.email      ?? "",
-    phone:      user?.phone      ?? "",
+    phone:      user?.phone === "—" ? "" : user?.phone ?? "",
     role:       user?.role       ?? "" as UserRole | "",
     status:     user?.status     ?? "ativo" as UserStatus,
-    company:    user?.company    ?? "",
-    department: user?.department ?? "",
+    company:    systemCompany,
+    department: user?.department === "—" ? "" : user?.department ?? "",
     // 2FA desativado temporariamente até a funcionalidade existir no produto.
     twoFA:      false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const set = (k: string) => (v: any) => setForm(f => ({ ...f, [k]: v }));
 
@@ -242,19 +272,24 @@ function UserFormModal({ user, departments, onClose, onSave }: { user?: UserReco
     if (!form.name)    e.name    = "Nome obrigatório";
     if (!form.email)   e.email   = "E-mail obrigatório";
     if (!form.role)    e.role    = "Perfil obrigatório";
-    if (!form.company) e.company = "Empresa obrigatória";
     setErrors(e);
     return !Object.keys(e).length;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    setTimeout(() => {
+    setSaveError("");
+
+    try {
+      await onSave(form);
       setSaving(false);
       setSaved(true);
-      setTimeout(() => onSave(form), 1000);
-    }, 1400);
+      window.setTimeout(onClose, 700);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar o usuário.");
+      setSaving(false);
+    }
   };
 
   return (
@@ -325,8 +360,7 @@ function UserFormModal({ user, departments, onClose, onSave }: { user?: UserReco
                 </div>
                 <Field label="Telefone" placeholder="(11) 99999-0000" value={form.phone} onChange={set("phone")} type="tel" icon={Phone} mask={maskPhone} inputMode="numeric" maxLength={15} />
                 <div>
-                  <Field label="Empresa" placeholder="Alpha Tecnologia" value={form.company} onChange={set("company")} icon={Building2} required />
-                  {errors.company && <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "4px", fontFamily: "'Inter',sans-serif" }}>{errors.company}</p>}
+                  <Field label="Empresa" placeholder="Orchestra" value={form.company} onChange={set("company")} icon={Building2} disabled />
                 </div>
                 <SelectField
                   label="Departamento"
@@ -340,7 +374,7 @@ function UserFormModal({ user, departments, onClose, onSave }: { user?: UserReco
                     value={form.role}
                     onChange={set("role")}
                     required
-                    options={roleOptions.map(r => ({ value: r, label: roleUi(r).label }))}
+                    options={roles}
                   />
                   {errors.role && <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "4px", fontFamily: "'Inter',sans-serif" }}>{errors.role}</p>}
                 </div>
@@ -358,6 +392,12 @@ function UserFormModal({ user, departments, onClose, onSave }: { user?: UserReco
                   <p style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
                     Um convite com link de acesso será enviado automaticamente para o e-mail informado.
                   </p>
+                </div>
+              )}
+              {saveError && (
+                <div className="flex items-start gap-2 rounded-xl px-3 py-2" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
+                  <AlertCircle size={14} style={{ color: "#EF4444", marginTop: "1px" }} className="shrink-0" />
+                  <p style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{saveError}</p>
                 </div>
               )}
             </div>
@@ -463,13 +503,21 @@ function UserViewModal({ user, onClose, onEdit }: { user: UserRecord; onClose: (
 }
 
 // ── Delete confirm modal ───────────────────────────────────────────────
-function DeleteModal({ user, onClose, onConfirm }: { user: UserRecord; onClose: () => void; onConfirm: () => void }) {
+function DeleteModal({ user, onClose, onConfirm }: { user: UserRecord; onClose: () => void; onConfirm: () => Promise<void> }) {
   const { colors } = useTheme();
   const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
 
-  const handle = () => {
+  const handle = async () => {
     setDeleting(true);
-    setTimeout(() => { setDeleting(false); onConfirm(); }, 1000);
+    setDeleteError("");
+
+    try {
+      await onConfirm();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Não foi possível remover o usuário.");
+      setDeleting(false);
+    }
   };
 
   return (
@@ -503,6 +551,11 @@ function DeleteModal({ user, onClose, onConfirm }: { user: UserRecord; onClose: 
           <p style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.6, marginBottom: "20px" }}>
             O acesso de <strong style={{ color: colors.textPrimary }}>{user.name}</strong> será revogado imediatamente e todos os dados associados serão removidos.
           </p>
+          {deleteError && (
+            <div className="rounded-xl px-3 py-2 mb-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", color: colors.textSecondary, fontSize: "12px", fontFamily: "'Inter',sans-serif" }}>
+              {deleteError}
+            </div>
+          )}
 
           <div className="flex gap-2">
             <button onClick={onClose} className="flex-1 rounded-xl py-2.5 transition-all" style={{ fontSize: "14px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
@@ -540,18 +593,64 @@ export function Usuarios() {
   const [editUser, setEditUser]     = useState<UserRecord | null | "new">(null);
   const [deleteUser, setDeleteUser] = useState<UserRecord | null>(null);
   const [departments, setDepartments] = useState<string[]>(fallbackDepartmentOptions);
+  const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [referenceLoading, setReferenceLoading] = useState(true);
+  const [referenceError, setReferenceError] = useState<string | null>(null);
+
+  const loadUsers = async () => {
+    setLoading(true);
+    setError(null);
+
+    const params = {
+      search: search.trim() || undefined,
+      status: statusFilter === "todos" ? undefined : statusFilter,
+      role: roleFilter === "todos" ? undefined : roleFilter,
+      per_page: 100,
+    };
+
+    try {
+      const [listResponse, metricsResponse] = await Promise.all([
+        usersApi.list(params),
+        usersApi.metrics(params),
+      ]);
+
+      setUsers(listResponse.data.map(mapApiUser));
+      setMetrics(metricsResponse);
+    } catch (err) {
+      setUsers([]);
+      setMetrics(null);
+      setError(err instanceof Error ? err.message : "Não foi possível carregar os usuários.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
 
-    departmentsApi.list()
-      .then(response => {
+    Promise.all([
+      departmentsApi.list(),
+      accessProfilesApi.list(),
+    ])
+      .then(([departmentsResponse, profilesResponse]) => {
         if (!active) return;
-        const apiDepartments = response.map(department => department.name).filter(Boolean);
-        setDepartments(Array.from(new Set([...apiDepartments, ...fallbackDepartmentOptions])));
+        const apiDepartments = departmentsResponse.map(department => department.name).filter(Boolean);
+        const apiRoles = profilesResponse.data
+          .filter(profile => profile.scope === "platform")
+          .map(mapProfileOption);
+
+        setDepartments(apiDepartments.length > 0 ? apiDepartments : fallbackDepartmentOptions);
+        setRoleOptions(apiRoles);
+        setReferenceError(null);
       })
-      .catch(() => {
-        if (active) setDepartments(fallbackDepartmentOptions);
+      .catch((err: Error) => {
+        if (!active) return;
+        setDepartments(fallbackDepartmentOptions);
+        setRoleOptions(["admin", "gerente", "financeiro", "operacional", "visualizador"].map(role => ({ value: role, label: roleUi(role).label })));
+        setReferenceError(err.message || "Não foi possível carregar departamentos e perfis de acesso.");
+      })
+      .finally(() => {
+        if (active) setReferenceLoading(false);
       });
 
     return () => {
@@ -610,17 +709,24 @@ export function Usuarios() {
   const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const handleSave = (data: any) => {
-    void data;
-    setError("Criação e edição de usuários ainda não estão disponíveis na API.");
-    setEditUser(null);
-    setViewUser(null);
+  const handleSave = async (data: any) => {
+    const payload = toUserPayload(data);
+
+    if (editUser === "new") {
+      await usersApi.create(payload);
+    } else if (editUser) {
+      await usersApi.update(editUser.id, payload);
+    }
+
+    await loadUsers();
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!deleteUser) return;
-    setError("Remoção de usuários ainda não está disponível na API.");
+
+    await usersApi.remove(deleteUser.id);
     setDeleteUser(null);
+    await loadUsers();
   };
 
   const kpis = [
@@ -632,7 +738,7 @@ export function Usuarios() {
 
   const roleBreakdown = metrics?.role_counts?.length
     ? metrics.role_counts
-    : roleOptions.map(role => ({ role, name: roleUi(role).label, total: users.filter(user => user.roleKey === role).length }));
+    : roleOptions.map(role => ({ role: role.value, name: role.label, total: users.filter(user => user.roleKey === role.value).length }));
 
   const cardStyle = {
     background: colors.card,
@@ -650,14 +756,21 @@ export function Usuarios() {
             Gerencie os usuários e seus perfis de acesso
           </p>
         </div>
-        <DefaultButton onClick={() => setEditUser("new")}>
-          <Plus size={16} /> Novo Usuário
+        <DefaultButton
+          onClick={() => {
+            if (!referenceLoading && roleOptions.length > 0) setEditUser("new");
+          }}
+          disabled={referenceLoading || roleOptions.length === 0}
+          title={referenceLoading ? "Aguarde os perfis e departamentos carregarem" : roleOptions.length === 0 ? "Nenhum perfil de acesso disponível" : undefined}
+        >
+          {referenceLoading ? <span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> : <Plus size={16} />}
+          Novo Usuário
         </DefaultButton>
       </div>
 
-      {error && (
+      {(error || referenceError) && (
         <div className="rounded-xl px-4 py-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "#F59E0B", fontSize: "13px", fontFamily: "'Inter',sans-serif" }}>
-          {error}
+          {error || referenceError}
         </div>
       )}
 
@@ -896,6 +1009,7 @@ export function Usuarios() {
         <UserFormModal
           user={editUser === "new" ? null : editUser}
           departments={departments}
+          roles={roleOptions}
           onClose={() => setEditUser(null)}
           onSave={handleSave}
         />

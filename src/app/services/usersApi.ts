@@ -4,6 +4,7 @@ export interface ApiAdminUser {
   id: number;
   name: string;
   email: string;
+  phone?: string | null;
   company: {
     id: number;
     name: string | null;
@@ -55,6 +56,17 @@ interface UserListParams {
   per_page?: number;
 }
 
+export interface AdminUserPayload {
+  name: string;
+  email: string;
+  phone?: string | null;
+  company?: string | null;
+  department?: string | null;
+  all_departments?: boolean;
+  role: string;
+  status: "active" | "pending" | "inactive" | string;
+}
+
 function toQuery(params: UserListParams = {}) {
   const query = new URLSearchParams();
 
@@ -75,5 +87,28 @@ export const usersApi = {
 
   metrics(params: UserListParams = {}) {
     return apiRequest<AdminUserMetrics>(`/users/metrics${toQuery(params)}`, { auth: true });
+  },
+
+  create(payload: AdminUserPayload) {
+    return apiRequest<ApiAdminUser>("/users", {
+      auth: true,
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  update(id: number, payload: AdminUserPayload) {
+    return apiRequest<ApiAdminUser>(`/users/${id}`, {
+      auth: true,
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  remove(id: number) {
+    return apiRequest<void>(`/users/${id}`, {
+      auth: true,
+      method: "DELETE",
+    });
   },
 };

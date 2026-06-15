@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useState, ReactNode } from "react";
+import { modulesApi } from "../services/modulesApi";
 
 export type Theme = "dark" | "light";
 
@@ -79,20 +80,90 @@ const light: ThemeColors = {
 
 export const themes = { dark, light };
 const THEME_STORAGE_KEY = "orchestra-admin-theme";
+const MODULES_STORAGE_KEY = "orchestra-admin-modules";
+
+export interface ModuleConfig {
+  id: string;
+  apiId?: number;
+  apiSlug: string;
+  label: string;
+  description: string;
+  icon: string;
+  locked: boolean;
+  enabled: boolean;
+}
+
+export const defaultModules: ModuleConfig[] = [
+  { id: "dashboard",  apiSlug: "dashboard",      label: "Dashboard",       description: "Visão geral executiva com KPIs, gráficos e atividades recentes", icon: "📊", locked: true,  enabled: true },
+  { id: "companies",  apiSlug: "empresas",       label: "Empresas",         description: "Cadastro e gestão de empresas clientes da plataforma",          icon: "🏢", locked: false, enabled: true },
+  { id: "contracts",  apiSlug: "contratos",      label: "Contratos",        description: "Gestão de contratos ativos, vencimentos e renovações",          icon: "📄", locked: false, enabled: true },
+  { id: "financial",  apiSlug: "financeiro",     label: "Financeiro",       description: "Lançamentos financeiros, receitas, despesas e fluxo de caixa", icon: "💰", locked: false, enabled: true },
+  { id: "plans",      apiSlug: "planos",         label: "Planos",           description: "Gerenciamento de planos de assinatura e seus recursos",         icon: "💳", locked: false, enabled: true },
+  { id: "reports",    apiSlug: "relatorios",     label: "Relatórios",       description: "Relatórios estratégicos, gráficos e indicadores de negócio",   icon: "📈", locked: false, enabled: true },
+  { id: "emails",     apiSlug: "emails",         label: "Caixa de E-mail",  description: "Caixa de saída de e-mails enviados pelo admin para clientes",  icon: "✉️", locked: false, enabled: true },
+  { id: "users",      apiSlug: "usuarios",       label: "Usuários",         description: "Gestão de usuários, perfis de acesso e permissões",            icon: "👤", locked: false, enabled: true },
+  { id: "settings",   apiSlug: "configuracoes",  label: "Configurações",    description: "Configurações do sistema, aparência e integrações",            icon: "⚙️", locked: true,  enabled: true },
+];
+
+export interface ThemeApiModule {
+  id: number;
+  name?: string;
+  module?: string;
+  slug?: string;
+  key?: string;
+  description?: string | null;
+  is_active?: boolean;
+  ver?: boolean;
+  criar?: boolean;
+  editar?: boolean;
+  excluir?: boolean;
+}
+
+interface SyncModulesOptions {
+  defaultEnabled?: boolean;
+  disableMissing?: boolean;
+  preserveLocked?: boolean;
+}
+
+function getInitialModules() {
+  const stored = window.localStorage.getItem(MODULES_STORAGE_KEY);
+  if (!stored) return defaultModules;
+
+  try {
+    const parsed = JSON.parse(stored) as Array<Partial<ModuleConfig> & { id: string }>;
+    return defaultModules.map((module) => {
+      const storedModule = parsed.find((item) => item.id === module.id);
+      return storedModule ? { ...module, enabled: module.locked ? true : storedModule.enabled ?? module.enabled } : module;
+    });
+  } catch {
+    return defaultModules;
+  }
+}
 
 interface ThemeCtx {
   theme: Theme;
   colors: ThemeColors;
   toggle: () => void;
+  modules: ModuleConfig[];
+  setModuleEnabled: (id: string, enabled: boolean) => void;
+  syncModulesFromApi: (apiModules: ThemeApiModule[], options?: SyncModulesOptions) => void;
 }
 
-const ThemeContext = createContext<ThemeCtx>({ theme: "light", colors: light, toggle: () => {} });
+const ThemeContext = createContext<ThemeCtx>({
+  theme: "light",
+  colors: light,
+  toggle: () => {},
+  modules: defaultModules,
+  setModuleEnabled: () => {},
+  syncModulesFromApi: () => {},
+});
 
-export function ThemeProvider({ children }: { children: ReactNode }) {
+export function ThemeProvider({ children, authToken }: { children: ReactNode; authToken?: string | null }) {
   const [theme, setTheme] = useState<Theme>(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     return stored === "dark" || stored === "light" ? stored : "light";
   });
+  const [modules, setModules] = useState<ModuleConfig[]>(getInitialModules);
 
   const toggle = () => setTheme((current) => {
     const next = current === "dark" ? "light" : "dark";
@@ -100,8 +171,66 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return next;
   });
 
+  const setModuleEnabled = useCallback((id: string, enabled: boolean) => {
+    setModules((current) => {
+      const next = current.map((module) => module.id === id && !module.locked ? { ...module, enabled } : module);
+      window.localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(next.map(({ id, enabled }) => ({ id, enabled }))));
+      return next;
+    });
+  }, []);
+
+  const syncModulesFromApi = useCallback((apiModules: ThemeApiModule[], options: SyncModulesOptions = {}) => {
+    const { defaultEnabled = false, disableMissing = false, preserveLocked = true } = options;
+
+    setModules((current) => {
+      const next = current.map((module) => {
+        const apiModule = apiModules.find((item) => (item.slug ?? item.key) === module.apiSlug);
+        if (!apiModule) {
+          return disableMissing ? { ...module, enabled: false } : module;
+        }
+
+        const hasAnyPermission = Boolean(apiModule.ver ?? apiModule.criar ?? apiModule.editar ?? apiModule.excluir);
+
+        return {
+          ...module,
+          apiId: apiModule.id,
+          description: apiModule.description ?? module.description,
+          label: apiModule.name ?? apiModule.module ?? module.label,
+          enabled: preserveLocked && module.locked ? true : apiModule.is_active ?? (hasAnyPermission || defaultEnabled),
+        };
+      });
+
+      window.localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(next.map(({ id, enabled }) => ({ id, enabled }))));
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!authToken) return;
+
+    let active = true;
+
+    setModules((current) => current.map((module) => ({ ...module, enabled: false })));
+
+    modulesApi.myList()
+      .then((apiModules) => {
+        if (active) {
+          syncModulesFromApi(apiModules, {
+            defaultEnabled: true,
+            disableMissing: true,
+            preserveLocked: false,
+          });
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [authToken, syncModulesFromApi]);
+
   return (
-    <ThemeContext.Provider value={{ theme, colors: themes[theme], toggle }}>
+    <ThemeContext.Provider value={{ theme, colors: themes[theme], toggle, modules, setModuleEnabled, syncModulesFromApi }}>
       {children}
     </ThemeContext.Provider>
   );

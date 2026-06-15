@@ -10,11 +10,13 @@ import { useTheme } from "./ThemeContext";
 import { DefaultButton } from "./ui/default-button";
 import { AccessProfile, AccessProfilePayload, AccessProfilePermission, PermissionAction, accessProfilesApi } from "../services/accessProfilesApi";
 import { ApiDepartment, DepartmentPayload, departmentsApi } from "../services/departmentsApi";
+import { ApiModule, modulesApi } from "../services/modulesApi";
 
 // ── Submenu config ─────────────────────────────────────────────────────
 const submenu = [
   { id: "departamentos",  label: "Departamentos",    icon: Building2, group: "Organização" },
   { id: "perfis",         label: "Perfis de Acesso", icon: Shield,    group: "Organização" },
+  { id: "modulos",        label: "Módulos",          icon: Sliders,   group: "Organização" },
   { id: "notificacoes",   label: "Notificações",     icon: Bell,      group: "Sistema"     },
   { id: "seguranca",      label: "Segurança",        icon: Lock,      group: "Sistema"     },
   { id: "integracoes",    label: "Integrações",      icon: Link2,     group: "Sistema"     },
@@ -694,6 +696,7 @@ function PerfilModal({ perfil, templatePermissions, onClose, onSave }: { perfil?
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  const permissionsReady = form.permissions.length > 0;
 
   const set = (key: keyof AccessProfilePayload) => (value: any) => setForm(current => ({ ...current, [key]: value }));
 
@@ -724,6 +727,11 @@ function PerfilModal({ perfil, templatePermissions, onClose, onSave }: { perfil?
 
   const handleSave = async () => {
     if (!validate()) return;
+    if (!permissionsReady) {
+      setSaveError("Aguarde o carregamento das permissões antes de salvar o perfil.");
+      return;
+    }
+
     setSaving(true);
     setSaveError("");
 
@@ -822,36 +830,45 @@ function PerfilModal({ perfil, templatePermissions, onClose, onSave }: { perfil?
               </div>
             </div>
           ) : (
-            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
-              <div className="grid px-5 py-3" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", background: colors.surface, borderBottom: `1px solid ${colors.border}` }}>
-                <span style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>Módulo</span>
-                {perfilActions.map(action => (
-                  <button key={action.key} onClick={() => toggleColumn(action.key)} className="text-center" style={{ fontSize: "11px", color: action.color, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
-                    {action.label}
-                  </button>
-                ))}
-              </div>
-
-              {form.permissions.map((permission, index) => (
-                <div key={permission.module} className="grid items-center px-5 py-3" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", borderBottom: index < form.permissions.length - 1 ? `1px solid ${colors.border}` : "none" }}>
-                  <div className="flex items-center gap-2">
-                    <span style={{ fontSize: "15px" }}>{permission.icon}</span>
-                    <span style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif" }}>{permission.module}</span>
-                  </div>
+            permissionsReady ? (
+              <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+                <div className="grid px-5 py-3" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", background: colors.surface, borderBottom: `1px solid ${colors.border}` }}>
+                  <span style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>Módulo</span>
                   {perfilActions.map(action => (
-                    <div key={action.key} className="flex justify-center">
-                      <button
-                        onClick={() => togglePermission(index, action.key)}
-                        className="rounded-full flex items-center justify-center transition-all"
-                        style={{ width: "28px", height: "28px", background: permission[action.key] ? `${action.color}18` : colors.surface, border: `1px solid ${permission[action.key] ? `${action.color}40` : colors.border}` }}
-                      >
-                        {permission[action.key] ? <CheckCircle2 size={15} style={{ color: action.color }} /> : <X size={13} style={{ color: colors.textMuted }} />}
-                      </button>
-                    </div>
+                    <button key={action.key} onClick={() => toggleColumn(action.key)} className="text-center" style={{ fontSize: "11px", color: action.color, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+                      {action.label}
+                    </button>
                   ))}
                 </div>
-              ))}
-            </div>
+
+                {form.permissions.map((permission, index) => (
+                  <div key={permission.module} className="grid items-center px-5 py-3" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", borderBottom: index < form.permissions.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+                    <div className="flex items-center gap-2">
+                      <span style={{ fontSize: "15px" }}>{permission.icon}</span>
+                      <span style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif" }}>{permission.module}</span>
+                    </div>
+                    {perfilActions.map(action => (
+                      <div key={action.key} className="flex justify-center">
+                        <button
+                          onClick={() => togglePermission(index, action.key)}
+                          className="rounded-full flex items-center justify-center transition-all"
+                          style={{ width: "28px", height: "28px", background: permission[action.key] ? `${action.color}18` : colors.surface, border: `1px solid ${permission[action.key] ? `${action.color}40` : colors.border}` }}
+                        >
+                          {permission[action.key] ? <CheckCircle2 size={15} style={{ color: action.color }} /> : <X size={13} style={{ color: colors.textMuted }} />}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center rounded-2xl py-12 gap-3" style={{ border: `1px solid ${colors.border}`, background: colors.surface }}>
+                <AlertCircle size={24} style={{ color: "#F59E0B" }} />
+                <p style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif" }}>
+                  Permissões ainda não carregadas.
+                </p>
+              </div>
+            )
           )}
 
           {saveError && (
@@ -866,7 +883,7 @@ function PerfilModal({ perfil, templatePermissions, onClose, onSave }: { perfil?
           <button onClick={onClose} className="rounded-xl px-4 py-2 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
             Cancelar
           </button>
-          <DefaultButton onClick={handleSave} disabled={saving} className="px-5">
+          <DefaultButton onClick={handleSave} disabled={saving || !permissionsReady} className="px-5">
             {saving ? <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> Salvando...</> : <><CheckCheck size={14} />{isEdit ? "Salvar alterações" : "Criar perfil"}</>}
           </DefaultButton>
         </div>
@@ -946,6 +963,8 @@ function PerfisAcesso() {
   const [editPerfil, setEditPerfil] = useState<AccessProfile | null | "new">(null);
   const [delPerfil, setDelPerfil] = useState<AccessProfile | null>(null);
   const [expanded, setExpanded] = useState<number | null>(null);
+  const permissionsReady = templatePermissions.length > 0;
+  const canCreatePerfil = !loading && permissionsReady;
 
   const loadPerfis = async (query = search) => {
     setLoading(true);
@@ -1012,8 +1031,15 @@ function PerfisAcesso() {
             Defina o que cada perfil pode visualizar e executar no sistema
           </p>
         </div>
-        <DefaultButton onClick={() => setEditPerfil("new")}>
-          <Plus size={15} /> Novo Perfil
+        <DefaultButton
+          onClick={() => {
+            if (canCreatePerfil) setEditPerfil("new");
+          }}
+          disabled={!canCreatePerfil}
+          title={!canCreatePerfil ? "Aguarde as permissões carregarem" : undefined}
+        >
+          {loading ? <span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> : <Plus size={15} />}
+          Novo Perfil
         </DefaultButton>
       </div>
 
@@ -1042,6 +1068,15 @@ function PerfisAcesso() {
       {error && (
         <div className="rounded-xl px-4 py-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", color: colors.textSecondary, fontSize: "13px", fontFamily: "'Inter',sans-serif" }}>
           {error}
+        </div>
+      )}
+
+      {!loading && !error && !permissionsReady && (
+        <div className="flex items-start gap-2 rounded-xl px-4 py-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)" }}>
+          <AlertCircle size={15} style={{ color: "#F59E0B", marginTop: "1px" }} className="shrink-0" />
+          <p style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
+            As permissões de módulos ainda não foram carregadas. Recarregue a tela antes de criar um perfil.
+          </p>
         </div>
       )}
 
@@ -1164,6 +1199,307 @@ function PlaHolderSection({ id }: { id: string }) {
   );
 }
 
+// ── Módulos ────────────────────────────────────────────────────────────
+function LoadingBlock({ width = "100%", height = 12, className = "" }: { width?: string | number; height?: string | number; className?: string }) {
+  const { colors } = useTheme();
+  return <div className={`rounded-full animate-pulse ${className}`} style={{ width, height, background: colors.hoverBg }} />;
+}
+
+function Modulos() {
+  const { colors, theme, modules, setModuleEnabled, syncModulesFromApi } = useTheme();
+  const [apiModules, setApiModules] = useState<ApiModule[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const displayModules = apiModules.length > 0
+    ? apiModules.map((apiModule) => {
+        const localModule = modules.find((module) => module.apiSlug === apiModule.slug);
+
+        return {
+          id: localModule?.id ?? apiModule.slug,
+          apiId: apiModule.id,
+          apiSlug: apiModule.slug,
+          label: apiModule.name,
+          description: apiModule.description ?? localModule?.description ?? "",
+          icon: localModule?.icon ?? "🔧",
+          locked: localModule?.locked ?? false,
+          enabled: localModule?.locked ? true : apiModule.is_active,
+          known: Boolean(localModule),
+        };
+      })
+    : modules.map((module) => ({ ...module, known: true }));
+
+  const activeCount = displayModules.filter(m => m.enabled).length;
+  const lockedCount = displayModules.filter(m => m.locked).length;
+
+  const cardStyle = {
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    boxShadow: theme === "light" ? "0 2px 12px rgba(0,0,0,0.05)" : "0 4px 20px rgba(0,0,0,0.15)",
+  };
+
+  useEffect(() => {
+    let active = true;
+
+    modulesApi.list()
+      .then((response) => {
+        if (!active) return;
+        setApiModules(response.data);
+        syncModulesFromApi(response.data);
+        setApiError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setApiError(error instanceof Error ? error.message : "Não foi possível carregar os módulos da API.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [syncModulesFromApi]);
+
+  const handleToggle = async (moduleId: string, enabled: boolean) => {
+    const module = displayModules.find((item) => item.id === moduleId);
+    if (!module || module.locked) return;
+
+    if (module.known) {
+      setModuleEnabled(moduleId, enabled);
+    }
+
+    const apiModule = apiModules.find((item) => item.id === module.apiId || item.slug === module.apiSlug);
+    if (!apiModule) return;
+
+    try {
+      const updated = await modulesApi.update(apiModule.id, {
+        name: apiModule.name || module.label,
+        slug: apiModule.slug || module.apiSlug,
+        description: apiModule.description ?? module.description,
+        is_active: enabled,
+      });
+
+      const nextApiModules = apiModules.map((item) => item.id === updated.id ? updated : item);
+      setApiModules(nextApiModules);
+      syncModulesFromApi(nextApiModules);
+      setApiError(null);
+    } catch (error) {
+      if (module.known) {
+        setModuleEnabled(moduleId, !enabled);
+      }
+      setApiError(error instanceof Error ? error.message : "Não foi possível atualizar o módulo.");
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "20px", fontWeight: 600 }}>
+          Módulos do Sistema
+        </h2>
+        <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "3px" }}>
+          Ative ou desative os módulos do menu principal para todos os usuários
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {loading ? Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="rounded-2xl p-4 flex items-center gap-3" style={cardStyle}>
+            <LoadingBlock width={4} height={32} className="rounded-full" />
+            <div className="flex-1 space-y-2">
+              <LoadingBlock width="34%" height={22} />
+              <LoadingBlock width="68%" height={12} />
+            </div>
+          </div>
+        )) : [
+          { label: "Módulos ativos", value: activeCount, color: "#10B981" },
+          { label: "Módulos totais", value: displayModules.length, color: "#6366F1" },
+          { label: "Sempre ativos", value: lockedCount, color: "#8B5CF6" },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl p-4 flex items-center gap-3" style={cardStyle}>
+            <div className="w-1 h-8 rounded-full" style={{ background: s.color }} />
+            <div>
+              <p style={{ fontSize: "22px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 700, lineHeight: 1 }}>{s.value}</p>
+              <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "3px" }}>{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-start gap-3 rounded-xl px-4 py-3" style={{ background: "rgba(99,102,241,0.08)", border: "1px solid rgba(99,102,241,0.2)" }}>
+        <AlertCircle size={15} style={{ color: "#6366F1", marginTop: "1px" }} className="shrink-0" />
+        <p style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
+          {loading ? "Carregando módulos da API..." : "Módulos desativados ficam ocultos do menu lateral imediatamente para todos os usuários."}{" "}
+          Módulos marcados como <strong style={{ color: colors.textPrimary }}>Fixo</strong> não podem ser desativados.
+        </p>
+      </div>
+
+      {apiError && (
+        <div className="flex items-start gap-2 rounded-xl px-4 py-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)" }}>
+          <AlertCircle size={15} style={{ color: "#F59E0B", marginTop: "1px" }} className="shrink-0" />
+          <p style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>
+            Usando estado local: {apiError}
+          </p>
+        </div>
+      )}
+
+      <div className="rounded-2xl overflow-hidden" style={cardStyle}>
+        <div className="grid px-5 py-3"
+          style={{ gridTemplateColumns: "48px 1.8fr 2fr 100px 80px", borderBottom: `1px solid ${colors.border}`, background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)" }}
+        >
+          {["", "Módulo", "Descrição", "Status", "Ativo"].map((h, i) => (
+            <span key={i} style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
+          ))}
+        </div>
+
+        {loading ? (
+          <div>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <div
+                key={index}
+                className="grid items-center px-5 py-4"
+                style={{ gridTemplateColumns: "48px 1.8fr 2fr 100px 80px", borderBottom: index === 5 ? "none" : `1px solid ${colors.border}` }}
+              >
+                <LoadingBlock width={36} height={36} className="rounded-xl" />
+                <div className="space-y-2">
+                  <LoadingBlock width="48%" />
+                  <LoadingBlock width={44} height={10} />
+                </div>
+                <LoadingBlock width="78%" />
+                <LoadingBlock width={70} height={22} />
+                <div className="flex justify-center">
+                  <LoadingBlock width={44} height={24} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : displayModules.map((mod, idx) => {
+          const isLast = idx === displayModules.length - 1;
+          return (
+            <div
+              key={mod.id}
+              className="grid items-center px-5 py-4 transition-all"
+              style={{
+                gridTemplateColumns: "48px 1.8fr 2fr 100px 80px",
+                borderBottom: isLast ? "none" : `1px solid ${colors.border}`,
+                opacity: mod.locked ? 1 : mod.enabled ? 1 : 0.55,
+              }}
+              onMouseEnter={e => !mod.locked && (e.currentTarget.style.background = colors.hoverBg)}
+              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+            >
+              <div
+                className="rounded-xl flex items-center justify-center shrink-0"
+                style={{
+                  width: "36px",
+                  height: "36px",
+                  background: mod.enabled
+                    ? "rgba(99,102,241,0.12)"
+                    : theme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
+                  fontSize: "16px",
+                  filter: mod.enabled ? "none" : "grayscale(1)",
+                  transition: "all 0.3s",
+                }}
+              >
+                {mod.icon}
+              </div>
+
+              <div>
+                <p style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
+                  {mod.label}
+                </p>
+                {mod.locked && (
+                  <span style={{ fontSize: "10px", color: "#8B5CF6", fontFamily: "'Inter',sans-serif", fontWeight: 600, background: "rgba(139,92,246,0.12)", padding: "1px 6px", borderRadius: "999px" }}>
+                    Fixo
+                  </span>
+                )}
+              </div>
+
+              <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", paddingRight: "16px" }}>
+                {mod.description}
+              </p>
+
+              <span
+                className="rounded-full px-2.5 py-1 inline-flex w-fit items-center gap-1.5"
+                style={{
+                  fontSize: "11px",
+                  fontFamily: "'Inter',sans-serif",
+                  fontWeight: 500,
+                  color: mod.enabled ? "#10B981" : colors.textMuted,
+                  background: mod.enabled ? "rgba(16,185,129,0.12)" : theme === "dark" ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.06)",
+                  transition: "all 0.3s",
+                }}
+              >
+                <span className="rounded-full" style={{ width: "6px", height: "6px", background: mod.enabled ? "#10B981" : colors.textMuted, transition: "background 0.3s" }} />
+                {mod.enabled ? "Ativo" : "Inativo"}
+              </span>
+
+              <div className="flex justify-center">
+                <button
+                  onClick={() => handleToggle(mod.id, !mod.enabled)}
+                  disabled={mod.locked || loading}
+                  className="rounded-full transition-all duration-300"
+                  style={{
+                    width: "44px",
+                    height: "24px",
+                    background: mod.enabled ? "#6366F1" : theme === "dark" ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.15)",
+                    position: "relative",
+                    cursor: mod.locked || loading ? "not-allowed" : "pointer",
+                    opacity: mod.locked || loading ? 0.5 : 1,
+                  }}
+                  title={mod.locked ? "Este módulo não pode ser desativado" : mod.enabled ? "Desativar módulo" : "Ativar módulo"}
+                >
+                  <div
+                    className="absolute top-1 rounded-full bg-white transition-all duration-300"
+                    style={{ width: "16px", height: "16px", left: mod.enabled ? "24px" : "4px", boxShadow: "0 1px 3px rgba(0,0,0,0.2)" }}
+                  />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="rounded-2xl p-5 space-y-3" style={cardStyle}>
+        <div className="flex items-center justify-between">
+          <h3 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "15px", fontWeight: 600 }}>
+            Preview do Menu
+          </h3>
+          <span style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
+            {loading ? "Carregando..." : `${activeCount} ite${activeCount !== 1 ? "ns" : "m"} visível${activeCount !== 1 ? "s" : ""}`}
+          </span>
+        </div>
+        <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
+          Como ficará o menu lateral após as alterações:
+        </p>
+        <div
+          className="rounded-xl p-3 space-y-1"
+          style={{ background: theme === "dark" ? "rgba(17,24,39,0.8)" : colors.surface, border: `1px solid ${colors.border}` }}
+        >
+          {loading ? Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="flex items-center gap-2.5 rounded-lg px-3 py-2">
+              <LoadingBlock width={18} height={18} />
+              <LoadingBlock width={`${48 + index * 6}%`} />
+            </div>
+          )) : displayModules.filter(m => m.enabled).map(mod => (
+            <div key={mod.id} className="flex items-center gap-2.5 rounded-lg px-3 py-2"
+              style={{ background: "rgba(99,102,241,0.06)", border: "1px solid rgba(99,102,241,0.1)" }}
+            >
+              <span style={{ fontSize: "13px" }}>{mod.icon}</span>
+              <span style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif" }}>{mod.label}</span>
+            </div>
+          ))}
+          {!loading && activeCount === 0 && (
+            <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textAlign: "center", padding: "8px" }}>
+              Nenhum módulo ativo
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Main Configuracoes ─────────────────────────────────────────────────
 export function Configuracoes() {
   const { colors, theme } = useTheme();
@@ -1173,6 +1509,7 @@ export function Configuracoes() {
     switch (active) {
       case "departamentos": return <Departamentos />;
       case "perfis":        return <PerfisAcesso />;
+      case "modulos":       return <Modulos />;
       case "notificacoes":  return <Notificacoes />;
       case "seguranca":     return <Seguranca />;
       case "integracoes":   return <Integracoes />;

@@ -43,7 +43,7 @@ interface SidebarProps {
 
 export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const { colors, theme } = useTheme();
+  const { colors, theme, modules } = useTheme();
   const dispatch = useAppDispatch();
   const user = useAppSelector((state) => state.auth.user);
   const userRoleLabel = user ? getCompanyUserRoleLabel(user) : "Admin";
@@ -90,14 +90,22 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {navGroups.map((group) => (
+        {navGroups.map((group) => {
+          const visibleItems = group.items.filter((item) => {
+            const module = modules.find((moduleItem) => moduleItem.id === item.id);
+            return Boolean(module?.enabled);
+          });
+
+          if (visibleItems.length === 0) return null;
+
+          return (
           <div key={group.label} className="mb-3">
             {!collapsed && (
               <p className="px-5 pb-2 pt-1" style={{ fontSize: "10px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
                 {group.label}
               </p>
             )}
-            {group.items.map(({ icon: Icon, label, id }) => {
+            {visibleItems.map(({ icon: Icon, label, id }) => {
               const isActive = activeItem === id;
               return (
                 <button
@@ -126,7 +134,8 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
               );
             })}
           </div>
-        ))}
+          );
+        })}
       </nav>
 
       {/* Collapse toggle */}
