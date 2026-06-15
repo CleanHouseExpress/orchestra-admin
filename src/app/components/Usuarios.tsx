@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import {
   Users, Plus, Search, X, Pencil, Trash2, Eye,
   ChevronDown, CheckCircle2, Clock, XCircle, Shield,
-  UserCog, User, Mail, Phone, Building2, Lock,
+  UserCog, User, Mail, Phone, Building2,
   ArrowUpRight, ArrowDownRight, MoreHorizontal,
   AlertCircle, CheckCheck, Key, RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
 import { AdminUserMetrics, ApiAdminUser, usersApi } from "../services/usersApi";
+import { departmentsApi } from "../services/departmentsApi";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type UserRole   = string;
@@ -51,6 +53,7 @@ const statusConfig: Record<UserStatus, { label: string; color: string; bg: strin
 const roleOptions: UserRole[]   = ["admin","gerente","financeiro","operacional","visualizador"];
 const statusOptions: UserStatus[] = ["ativo","inativo","pendente"];
 const ITEMS_PER_PAGE = 8;
+const fallbackDepartmentOptions = ["Administrativo", "Comercial", "Financeiro", "Jurídico", "Marketing", "Operações", "RH", "Suporte", "TI"];
 
 function roleUi(role: string, label?: string) {
   return roleConfig[role] ?? {
@@ -76,6 +79,14 @@ function formatDate(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function maskPhone(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
 function mapApiUser(user: ApiAdminUser): UserRecord {
@@ -119,9 +130,10 @@ function Avatar({ user, size = 36 }: { user: UserRecord; size?: number }) {
 }
 
 // ── Field ──────────────────────────────────────────────────────────────
-function Field({ label, placeholder, value, onChange, type = "text", icon: Icon, required }: any) {
+function Field({ label, placeholder, value, onChange, type = "text", icon: Icon, required, mask, inputMode, maxLength }: any) {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
+  const handleChange = (raw: string) => onChange(mask ? mask(raw) : raw);
   return (
     <div>
       <label style={{ fontSize: "13px", color: colors.textSecondary, display: "block", marginBottom: "7px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
@@ -131,9 +143,9 @@ function Field({ label, placeholder, value, onChange, type = "text", icon: Icon,
         style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px" }}
       >
         {Icon && <Icon size={15} style={{ color: focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
-        <input type={type} value={value} onChange={e => onChange(e.target.value)}
+        <input type={type} value={value} onChange={e => handleChange(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          placeholder={placeholder} className="flex-1 bg-transparent outline-none"
+          placeholder={placeholder} inputMode={inputMode} maxLength={maxLength} className="flex-1 bg-transparent outline-none"
           style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif" }}
         />
       </div>
@@ -143,31 +155,68 @@ function Field({ label, placeholder, value, onChange, type = "text", icon: Icon,
 
 function SelectField({ label, value, onChange, options, required }: any) {
   const { colors } = useTheme();
-  const [focused, setFocused] = useState(false);
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option: any) => option.value === value);
+
   return (
-    <div>
+    <div className="relative">
       <label style={{ fontSize: "13px", color: colors.textSecondary, display: "block", marginBottom: "7px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
         {label}{required && <span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>}
       </label>
-      <div className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
-        style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px" }}
+      <button
+        type="button"
+        onClick={() => setOpen(current => !current)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        className="w-full flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200 text-left"
+        style={{ background: colors.inputBg, border: `1px solid ${open ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: open ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px" }}
       >
-        <select value={value} onChange={e => onChange(e.target.value)}
-          onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
-          className="flex-1 bg-transparent outline-none appearance-none cursor-pointer"
-          style={{ fontSize: "14px", color: value ? colors.textPrimary : colors.textMuted, fontFamily: "'Inter',sans-serif" }}
+        <span className="flex-1 truncate" style={{ fontSize: "14px", color: selected ? colors.textPrimary : colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
+          {selected?.label ?? "Selecionar..."}
+        </span>
+        <ChevronDown size={13} style={{ color: colors.textMuted, transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 160ms ease" }} className="shrink-0 pointer-events-none" />
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 right-0 mt-1.5 rounded-xl overflow-hidden z-[70]"
+          style={{ background: colors.card, border: `1px solid ${colors.borderStrong}`, boxShadow: "0 18px 44px rgba(0,0,0,0.32)" }}
         >
-          <option value="">Selecionar...</option>
-          {options.map((o: any) => <option key={o.value} value={o.value}>{o.label}</option>)}
-        </select>
-        <ChevronDown size={13} style={{ color: colors.textMuted }} className="shrink-0 pointer-events-none" />
-      </div>
+          <button
+            type="button"
+            onMouseDown={e => e.preventDefault()}
+            onClick={() => { onChange(""); setOpen(false); }}
+            className="w-full text-left px-3.5 py-2.5 transition-all"
+            style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", background: !value ? colors.hoverBg : "transparent" }}
+            onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
+            onMouseLeave={e => (e.currentTarget.style.background = !value ? colors.hoverBg : "transparent")}
+          >
+            Selecionar...
+          </button>
+          {options.map((option: any) => {
+            const active = option.value === value;
+            return (
+              <button
+                key={option.value}
+                type="button"
+                onMouseDown={e => e.preventDefault()}
+                onClick={() => { onChange(option.value); setOpen(false); }}
+                className="w-full text-left px-3.5 py-2.5 transition-all"
+                style={{ fontSize: "13px", color: active ? "#fff" : colors.textSecondary, fontFamily: "'Inter',sans-serif", background: active ? "linear-gradient(135deg, #6366F1, #4338CA)" : "transparent" }}
+                onMouseEnter={e => { if (!active) e.currentTarget.style.background = colors.hoverBg; }}
+                onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
 
 // ── User Form Modal (create + edit) ────────────────────────────────────
-function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; onClose: () => void; onSave: (data: any) => void }) {
+function UserFormModal({ user, departments, onClose, onSave }: { user?: UserRecord | null; departments: string[]; onClose: () => void; onSave: (data: any) => void }) {
   const { colors, theme } = useTheme();
   const isEdit = !!user;
 
@@ -179,7 +228,8 @@ function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; on
     status:     user?.status     ?? "ativo" as UserStatus,
     company:    user?.company    ?? "",
     department: user?.department ?? "",
-    twoFA:      user?.twoFA      ?? false,
+    // 2FA desativado temporariamente até a funcionalidade existir no produto.
+    twoFA:      false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -273,12 +323,17 @@ function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; on
                   <Field label="E-mail" placeholder="joao@empresa.com" value={form.email} onChange={set("email")} type="email" icon={Mail} required />
                   {errors.email && <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "4px", fontFamily: "'Inter',sans-serif" }}>{errors.email}</p>}
                 </div>
-                <Field label="Telefone" placeholder="(11) 9 9999-0000" value={form.phone} onChange={set("phone")} type="tel" icon={Phone} />
+                <Field label="Telefone" placeholder="(11) 99999-0000" value={form.phone} onChange={set("phone")} type="tel" icon={Phone} mask={maskPhone} inputMode="numeric" maxLength={15} />
                 <div>
                   <Field label="Empresa" placeholder="Alpha Tecnologia" value={form.company} onChange={set("company")} icon={Building2} required />
                   {errors.company && <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "4px", fontFamily: "'Inter',sans-serif" }}>{errors.company}</p>}
                 </div>
-                <Field label="Departamento" placeholder="Financeiro, TI..." value={form.department} onChange={set("department")} />
+                <SelectField
+                  label="Departamento"
+                  value={form.department}
+                  onChange={set("department")}
+                  options={departments.map(department => ({ value: department, label: department }))}
+                />
                 <div>
                   <SelectField
                     label="Perfil de acesso"
@@ -295,27 +350,6 @@ function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; on
                   onChange={set("status")}
                   options={statusOptions.map(s => ({ value: s, label: statusConfig[s].label }))}
                 />
-              </div>
-
-              {/* 2FA toggle */}
-              <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
-                <div className="flex items-center gap-3">
-                  <div className="rounded-lg flex items-center justify-center" style={{ width: "32px", height: "32px", background: form.twoFA ? "rgba(99,102,241,0.12)" : colors.card }}>
-                    <Lock size={14} style={{ color: form.twoFA ? "#6366F1" : colors.textMuted }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>Autenticação em dois fatores</p>
-                    <p style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Exigir 2FA para este usuário</p>
-                  </div>
-                </div>
-                <button onClick={() => set("twoFA")(!form.twoFA)}
-                  className="rounded-full transition-all duration-300"
-                  style={{ width: "44px", height: "24px", background: form.twoFA ? "#6366F1" : colors.border, position: "relative", flexShrink: 0 }}
-                >
-                  <div className="absolute top-1 rounded-full bg-white transition-all duration-300"
-                    style={{ width: "16px", height: "16px", left: form.twoFA ? "24px" : "4px" }}
-                  />
-                </button>
               </div>
 
               {!isEdit && (
@@ -336,16 +370,13 @@ function UserFormModal({ user, onClose, onSave }: { user?: UserRecord | null; on
               >
                 Cancelar
               </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 rounded-xl px-5 py-2 transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-              >
+              <DefaultButton onClick={handleSave} disabled={saving} className="px-5">
                 {saving ? (
                   <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> Salvando...</>
                 ) : (
                   <><CheckCheck size={14} /> {isEdit ? "Salvar alterações" : "Criar usuário"}</>
                 )}
-              </button>
+              </DefaultButton>
             </div>
           </>
         )}
@@ -386,11 +417,6 @@ function UserViewModal({ user, onClose, onEdit }: { user: UserRecord; onClose: (
                 <span className="flex items-center gap-1 rounded-full px-2.5 py-1" style={{ fontSize: "11px", color: status.color, background: status.bg, fontFamily: "'Inter',sans-serif" }}>
                   <status.icon size={10} /> {status.label}
                 </span>
-                {user.twoFA && (
-                  <span className="flex items-center gap-1 rounded-full px-2.5 py-1" style={{ fontSize: "11px", color: "#10B981", background: "rgba(16,185,129,0.1)", fontFamily: "'Inter',sans-serif" }}>
-                    <Lock size={9} /> 2FA
-                  </span>
-                )}
               </div>
             </div>
           </div>
@@ -426,11 +452,9 @@ function UserViewModal({ user, onClose, onEdit }: { user: UserRecord; onClose: (
             <button onClick={onClose} className="rounded-xl px-4 py-2 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
               Fechar
             </button>
-            <button onClick={onEdit} className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-            >
+            <DefaultButton onClick={onEdit}>
               <Pencil size={13} /> Editar
-            </button>
+            </DefaultButton>
           </div>
         </div>
       </div>
@@ -515,6 +539,25 @@ export function Usuarios() {
   const [viewUser, setViewUser]     = useState<UserRecord | null>(null);
   const [editUser, setEditUser]     = useState<UserRecord | null | "new">(null);
   const [deleteUser, setDeleteUser] = useState<UserRecord | null>(null);
+  const [departments, setDepartments] = useState<string[]>(fallbackDepartmentOptions);
+
+  useEffect(() => {
+    let active = true;
+
+    departmentsApi.list()
+      .then(response => {
+        if (!active) return;
+        const apiDepartments = response.map(department => department.name).filter(Boolean);
+        setDepartments(Array.from(new Set([...apiDepartments, ...fallbackDepartmentOptions])));
+      })
+      .catch(() => {
+        if (active) setDepartments(fallbackDepartmentOptions);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -584,7 +627,7 @@ export function Usuarios() {
     { label: "Total de Usuários", value: metrics?.total_users ?? users.length, color: "#6366F1", icon: Users, change: "base principal", positive: true },
     { label: "Usuários Ativos", value: metrics?.active_users ?? users.filter(u => u.status === "ativo").length, color: "#10B981", icon: CheckCircle2, change: `${metrics?.active_rate ?? 0}% do total`, positive: true },
     { label: "Pendentes", value: metrics?.pending_users ?? users.filter(u => u.status === "pendente").length, color: "#F59E0B", icon: Clock, change: "aguardando verificação", positive: false },
-    { label: "Com 2FA ativo", value: metrics?.two_factor_enabled_users ?? users.filter(u => u.twoFA).length, color: "#8B5CF6", icon: Lock, change: `${metrics?.two_factor_rate ?? 0}% protegidos`, positive: true },
+    // 2FA removido temporariamente da tela até a funcionalidade ser disponibilizada.
   ];
 
   const roleBreakdown = metrics?.role_counts?.length
@@ -607,12 +650,9 @@ export function Usuarios() {
             Gerencie os usuários e seus perfis de acesso
           </p>
         </div>
-        <button onClick={() => setEditUser("new")}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-        >
+        <DefaultButton onClick={() => setEditUser("new")}>
           <Plus size={16} /> Novo Usuário
-        </button>
+        </DefaultButton>
       </div>
 
       {error && (
@@ -622,8 +662,8 @@ export function Usuarios() {
       )}
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {loading && !metrics ? Array.from({ length: 4 }).map((_, index) => (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {loading && !metrics ? Array.from({ length: 3 }).map((_, index) => (
           <div key={index} className="rounded-2xl p-5" style={cardStyle}>
             <div className="flex items-start justify-between mb-3">
               <LoadingBlock width={38} height={38} />
@@ -709,9 +749,9 @@ export function Usuarios() {
       <div className="rounded-2xl overflow-hidden" style={cardStyle}>
         {/* Head */}
         <div className="grid px-5 py-3"
-          style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px", borderBottom: `1px solid ${colors.border}`, background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)" }}
+          style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 100px", borderBottom: `1px solid ${colors.border}`, background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)" }}
         >
-          {["Usuário", "Empresa", "Departamento", "Perfil", "Status", "2FA", "Ações"].map(h => (
+          {["Usuário", "Empresa", "Departamento", "Perfil", "Status", "Ações"].map(h => (
             <span key={h} style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
           ))}
         </div>
@@ -722,7 +762,7 @@ export function Usuarios() {
               <div
                 key={index}
                 className="grid items-center px-5 py-3.5"
-                style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px", borderBottom: index < 7 ? `1px solid ${colors.border}` : "none" }}
+                style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 100px", borderBottom: index < 7 ? `1px solid ${colors.border}` : "none" }}
               >
                 <div className="flex items-center gap-3">
                   <LoadingBlock width={34} height={34} />
@@ -735,7 +775,6 @@ export function Usuarios() {
                 <LoadingBlock width="58%" height={12} />
                 <LoadingBlock width={92} height={24} />
                 <LoadingBlock width={72} height={24} />
-                <LoadingBlock width={48} height={20} />
                 <LoadingBlock width={72} height={26} />
               </div>
             ))}
@@ -752,7 +791,7 @@ export function Usuarios() {
           return (
             <div key={user.id}
               className="grid items-center px-5 py-3.5 transition-all cursor-pointer group"
-              style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 1fr 100px", borderBottom: isLast ? "none" : `1px solid ${colors.border}` }}
+              style={{ gridTemplateColumns: "2fr 1.5fr 1.2fr 1fr 1fr 100px", borderBottom: isLast ? "none" : `1px solid ${colors.border}` }}
               onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
               onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
               onClick={() => setViewUser(user)}
@@ -780,14 +819,6 @@ export function Usuarios() {
               {/* Status */}
               <span className="flex items-center gap-1 rounded-full px-2.5 py-1 w-fit" style={{ fontSize: "11px", color: status.color, background: status.bg, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
                 <status.icon size={10} /> {status.label}
-              </span>
-
-              {/* 2FA */}
-              <span>
-                {user.twoFA
-                  ? <span className="flex items-center gap-1 rounded-full px-2 py-0.5 w-fit" style={{ fontSize: "10px", color: "#10B981", background: "rgba(16,185,129,0.1)", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}><Lock size={9} /> Ativo</span>
-                  : <span style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>—</span>
-                }
               </span>
 
               {/* Actions */}
@@ -864,6 +895,7 @@ export function Usuarios() {
       {editUser !== null && (
         <UserFormModal
           user={editUser === "new" ? null : editUser}
+          departments={departments}
           onClose={() => setEditUser(null)}
           onSave={handleSave}
         />

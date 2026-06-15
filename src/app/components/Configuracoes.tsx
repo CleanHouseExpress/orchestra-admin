@@ -7,6 +7,8 @@ import {
   Webhook, Key, RefreshCw, Download, Upload, Sliders
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
+import { AccessProfile, AccessProfilePayload, AccessProfilePermission, PermissionAction, accessProfilesApi } from "../services/accessProfilesApi";
 import { ApiDepartment, DepartmentPayload, departmentsApi } from "../services/departmentsApi";
 
 // ── Submenu config ─────────────────────────────────────────────────────
@@ -204,15 +206,12 @@ function DeptModal({ dept, onClose, onSave }: { dept?: Departamento | null; onCl
               >
                 Cancelar
               </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 rounded-xl px-5 py-2 transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500, boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
-              >
+              <DefaultButton onClick={handleSave} disabled={saving} className="px-5">
                 {saving
                   ? <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> Salvando...</>
                   : <><CheckCheck size={14} /> {isEdit ? "Salvar" : "Criar"}</>
                 }
-              </button>
+              </DefaultButton>
             </div>
           </>
         )}
@@ -364,13 +363,9 @@ function Departamentos() {
             Organize sua estrutura interna por departamentos
           </p>
         </div>
-        <button onClick={() => setEditDept("new")}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90 whitespace-nowrap"
-          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-          disabled={loading}
-        >
+        <DefaultButton onClick={() => setEditDept("new")} className="whitespace-nowrap" disabled={loading}>
           <Plus size={16} /> Novo Departamento
-        </button>
+        </DefaultButton>
       </div>
 
       {error && (
@@ -644,11 +639,9 @@ function Aparencia() {
             <p style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>Tema atual: <strong>{theme === "dark" ? "Escuro" : "Claro"}</strong></p>
             <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "2px" }}>Alterne também pelo botão no canto superior direito</p>
           </div>
-          <button onClick={toggle} className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-          >
+          <DefaultButton onClick={toggle}>
             <Palette size={14} /> Alternar tema
-          </button>
+          </DefaultButton>
         </div>
       </SectionCard>
       <div className="grid grid-cols-2 gap-4">
@@ -678,6 +671,482 @@ function Aparencia() {
   );
 }
 
+const perfilColors = ["#3B82F6", "#14B8A6", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "#EC4899", "#94A3B8"];
+const DEFAULT_BUTTON_GRADIENT = "linear-gradient(135deg, #6366F1, #4338CA)";
+const perfilActions: { key: PermissionAction; label: string; color: string }[] = [
+  { key: "ver", label: "Ver", color: "#3B82F6" },
+  { key: "criar", label: "Criar", color: "#10B981" },
+  { key: "editar", label: "Editar", color: "#F59E0B" },
+  { key: "excluir", label: "Excluir", color: "#EF4444" },
+];
+
+function PerfilModal({ perfil, templatePermissions, onClose, onSave }: { perfil?: AccessProfile | null; templatePermissions: AccessProfilePermission[]; onClose: () => void; onSave: (payload: AccessProfilePayload) => Promise<void> }) {
+  const { colors, theme } = useTheme();
+  const isEdit = !!perfil;
+  const [tab, setTab] = useState<"geral" | "permissoes">("geral");
+  const [form, setForm] = useState<AccessProfilePayload>({
+    name: perfil?.name ?? "",
+    description: perfil?.description ?? "",
+    color: perfil?.color ?? "#3B82F6",
+    scope: perfil?.scope ?? "platform",
+    permissions: perfil?.permissions ?? templatePermissions.map(permission => ({ ...permission })),
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const set = (key: keyof AccessProfilePayload) => (value: any) => setForm(current => ({ ...current, [key]: value }));
+
+  const validate = () => {
+    const nextErrors: Record<string, string> = {};
+    if (!form.name.trim()) nextErrors.name = "Nome obrigatório";
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const togglePermission = (index: number, action: PermissionAction) => {
+    setForm(current => ({
+      ...current,
+      permissions: current.permissions.map((permission, permissionIndex) => (
+        permissionIndex === index ? { ...permission, [action]: !permission[action] } : permission
+      )),
+    }));
+  };
+
+  const toggleColumn = (action: PermissionAction) => {
+    const checked = form.permissions.every(permission => permission[action]);
+
+    setForm(current => ({
+      ...current,
+      permissions: current.permissions.map(permission => ({ ...permission, [action]: !checked })),
+    }));
+  };
+
+  const handleSave = async () => {
+    if (!validate()) return;
+    setSaving(true);
+    setSaveError("");
+
+    try {
+      await onSave(form);
+      onClose();
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Não foi possível salvar o perfil.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }} onClick={onClose}>
+      <div className="w-full max-w-[760px] rounded-2xl overflow-hidden flex flex-col" style={{ background: colors.card, border: `1px solid ${colors.borderStrong}`, boxShadow: "0 32px 80px rgba(0,0,0,0.4)", maxHeight: "90vh" }} onClick={event => event.stopPropagation()}>
+        <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: `1px solid ${colors.border}` }}>
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl flex items-center justify-center" style={{ width: "34px", height: "34px", background: `${form.color}25` }}>
+              <Shield size={16} style={{ color: form.color }} />
+            </div>
+            <h2 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "18px", fontWeight: 600 }}>
+              {isEdit ? `Editar - ${perfil.name}` : "Novo Perfil de Acesso"}
+            </h2>
+          </div>
+          <button onClick={onClose} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }}>
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="flex gap-1 px-6 pt-4">
+          {[
+            { id: "geral", label: "Geral" },
+            { id: "permissoes", label: "Permissões" },
+          ].map(item => (
+            <button
+              key={item.id}
+              onClick={() => setTab(item.id as "geral" | "permissoes")}
+              className="rounded-xl px-4 py-2 transition-all"
+              style={{ fontSize: "13px", fontFamily: "'Inter',sans-serif", background: tab === item.id ? DEFAULT_BUTTON_GRADIENT : colors.surface, color: tab === item.id ? "#fff" : colors.textMuted, border: `1px solid ${tab === item.id ? "transparent" : colors.border}` }}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5">
+          {tab === "geral" ? (
+            <div className="grid grid-cols-[1fr_220px] gap-5">
+              <div className="space-y-4">
+                <Field label="Nome do perfil" placeholder="Ex: Suporte, Financeiro..." value={form.name} onChange={set("name")} icon={Shield} required />
+                {errors.name && <p style={{ fontSize: "11px", color: "#EF4444", marginTop: "-10px", fontFamily: "'Inter',sans-serif" }}>{errors.name}</p>}
+
+                <div>
+                  <label style={{ fontSize: "13px", color: colors.textSecondary, display: "block", marginBottom: "7px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
+                    Descrição
+                  </label>
+                  <textarea
+                    value={form.description ?? ""}
+                    onChange={event => set("description")(event.target.value)}
+                    placeholder="Descreva as responsabilidades deste perfil..."
+                    rows={4}
+                    className="w-full rounded-xl px-4 py-3 outline-none resize-none transition-all"
+                    style={{ background: colors.inputBg, border: `1px solid ${colors.border}`, color: colors.textPrimary, fontSize: "14px", fontFamily: "'Inter',sans-serif", lineHeight: 1.6 }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ fontSize: "13px", color: colors.textSecondary, display: "block", marginBottom: "10px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
+                    Cor de identificação
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {perfilColors.map(color => (
+                      <button key={color} onClick={() => set("color")(color)} className="rounded-full transition-all hover:scale-110" style={{ width: "28px", height: "28px", background: color, outline: form.color === color ? `3px solid ${color}` : "3px solid transparent", outlineOffset: "2px" }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl p-4 h-fit" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+                <div className="rounded-xl flex items-center justify-center mb-3" style={{ width: "42px", height: "42px", background: `${form.color}20` }}>
+                  <Shield size={20} style={{ color: form.color }} />
+                </div>
+                <p style={{ fontFamily: "'Playfair Display',serif", fontSize: "17px", color: colors.textPrimary, fontWeight: 600 }}>{form.name || "Nome do perfil"}</p>
+                <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "4px", lineHeight: 1.5 }}>
+                  {form.description || "Descrição do perfil de acesso."}
+                </p>
+                <div className="grid grid-cols-2 gap-2 mt-4">
+                  {perfilActions.map(action => (
+                    <div key={action.key} className="rounded-xl px-3 py-2" style={{ background: theme === "dark" ? "rgba(255,255,255,0.03)" : colors.card }}>
+                      <p style={{ fontSize: "16px", color: action.color, fontFamily: "'Inter',sans-serif", fontWeight: 700 }}>{form.permissions.filter(permission => permission[action.key]).length}</p>
+                      <p style={{ fontSize: "10px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>{action.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl overflow-hidden" style={{ border: `1px solid ${colors.border}` }}>
+              <div className="grid px-5 py-3" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", background: colors.surface, borderBottom: `1px solid ${colors.border}` }}>
+                <span style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>Módulo</span>
+                {perfilActions.map(action => (
+                  <button key={action.key} onClick={() => toggleColumn(action.key)} className="text-center" style={{ fontSize: "11px", color: action.color, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+
+              {form.permissions.map((permission, index) => (
+                <div key={permission.module} className="grid items-center px-5 py-3" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", borderBottom: index < form.permissions.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+                  <div className="flex items-center gap-2">
+                    <span style={{ fontSize: "15px" }}>{permission.icon}</span>
+                    <span style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif" }}>{permission.module}</span>
+                  </div>
+                  {perfilActions.map(action => (
+                    <div key={action.key} className="flex justify-center">
+                      <button
+                        onClick={() => togglePermission(index, action.key)}
+                        className="rounded-full flex items-center justify-center transition-all"
+                        style={{ width: "28px", height: "28px", background: permission[action.key] ? `${action.color}18` : colors.surface, border: `1px solid ${permission[action.key] ? `${action.color}40` : colors.border}` }}
+                      >
+                        {permission[action.key] ? <CheckCircle2 size={15} style={{ color: action.color }} /> : <X size={13} style={{ color: colors.textMuted }} />}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {saveError && (
+            <div className="flex items-start gap-2 rounded-xl px-3 py-2 mt-4" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
+              <AlertCircle size={14} style={{ color: "#EF4444", marginTop: "1px" }} className="shrink-0" />
+              <p style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", lineHeight: 1.5 }}>{saveError}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+          <button onClick={onClose} className="rounded-xl px-4 py-2 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
+            Cancelar
+          </button>
+          <DefaultButton onClick={handleSave} disabled={saving} className="px-5">
+            {saving ? <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> Salvando...</> : <><CheckCheck size={14} />{isEdit ? "Salvar alterações" : "Criar perfil"}</>}
+          </DefaultButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DeletePerfilModal({ perfil, onClose, onConfirm }: { perfil: AccessProfile; onClose: () => void; onConfirm: () => Promise<void> }) {
+  const { colors } = useTheme();
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError("");
+
+    try {
+      await onConfirm();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : "Não foi possível remover o perfil.");
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }} onClick={onClose}>
+      <div className="w-full max-w-[420px] rounded-2xl p-6" style={{ background: colors.card, border: `1px solid ${colors.borderStrong}`, boxShadow: "0 32px 80px rgba(0,0,0,0.4)" }} onClick={event => event.stopPropagation()}>
+        <div className="flex items-center gap-4 mb-5">
+          <div className="rounded-2xl flex items-center justify-center shrink-0" style={{ width: "46px", height: "46px", background: "rgba(239,68,68,0.1)" }}>
+            <Trash2 size={20} style={{ color: "#EF4444" }} />
+          </div>
+          <div>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "17px", fontWeight: 600 }}>Remover perfil</h3>
+            <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Esta ação não pode ser desfeita.</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3 p-4 rounded-xl mb-4" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+          <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: "34px", height: "34px", background: `${perfil.color}20` }}>
+            <Shield size={15} style={{ color: perfil.color }} />
+          </div>
+          <div>
+            <p style={{ fontSize: "14px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>{perfil.name}</p>
+            <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>{perfil.userCount} usuário{perfil.userCount !== 1 ? "s" : ""} com este perfil</p>
+          </div>
+        </div>
+        {perfil.system && (
+          <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginBottom: "12px" }}>
+            Perfis do sistema não podem ser removidos.
+          </p>
+        )}
+        {deleteError && (
+          <div className="rounded-xl px-3 py-2 mb-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", color: colors.textSecondary, fontSize: "12px", fontFamily: "'Inter',sans-serif" }}>
+            {deleteError}
+          </div>
+        )}
+        <div className="flex gap-2">
+          <button onClick={onClose} className="flex-1 rounded-xl py-2.5 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
+            Cancelar
+          </button>
+          <button onClick={handleDelete} disabled={deleting || perfil.system} className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 hover:opacity-90 disabled:opacity-40 transition-all" style={{ background: "#EF4444", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>
+            {deleting ? <span className="rounded-full border-2 animate-spin" style={{ width: "13px", height: "13px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> : <><Trash2 size={13} /> Remover</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PerfisAcesso() {
+  const { colors, theme } = useTheme();
+  const [perfis, setPerfis] = useState<AccessProfile[]>([]);
+  const [templatePermissions, setTemplatePermissions] = useState<AccessProfilePermission[]>([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [editPerfil, setEditPerfil] = useState<AccessProfile | null | "new">(null);
+  const [delPerfil, setDelPerfil] = useState<AccessProfile | null>(null);
+  const [expanded, setExpanded] = useState<number | null>(null);
+
+  const loadPerfis = async (query = search) => {
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await accessProfilesApi.list({ search: query });
+      setPerfis(response.data);
+      setTemplatePermissions(response.meta?.modules.map(module => ({
+        module: module.module,
+        key: module.key,
+        icon: module.icon,
+        ver: false,
+        criar: false,
+        editar: false,
+        excluir: false,
+      })) ?? response.data[0]?.permissions.map(permission => ({ ...permission, ver: false, criar: false, editar: false, excluir: false })) ?? []);
+    } catch (requestError) {
+      setError(requestError instanceof Error ? requestError.message : "Não foi possível carregar os perfis.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPerfis("");
+  }, []);
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    window.clearTimeout((handleSearch as any).timer);
+    (handleSearch as any).timer = window.setTimeout(() => loadPerfis(value), 250);
+  };
+
+  const handleSave = async (payload: AccessProfilePayload) => {
+    if (editPerfil === "new") {
+      await accessProfilesApi.create(payload);
+    } else if (editPerfil) {
+      await accessProfilesApi.update(editPerfil.id, payload);
+    }
+
+    await loadPerfis();
+  };
+
+  const handleDelete = async () => {
+    if (!delPerfil) return;
+    await accessProfilesApi.remove(delPerfil.id);
+    setDelPerfil(null);
+    await loadPerfis();
+  };
+
+  const cardStyle = {
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    boxShadow: theme === "light" ? "0 2px 12px rgba(0,0,0,0.05)" : "0 4px 20px rgba(0,0,0,0.15)",
+  };
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "20px", fontWeight: 600 }}>Perfis de Acesso</h2>
+          <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "3px" }}>
+            Defina o que cada perfil pode visualizar e executar no sistema
+          </p>
+        </div>
+        <DefaultButton onClick={() => setEditPerfil("new")}>
+          <Plus size={15} /> Novo Perfil
+        </DefaultButton>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: "Perfis ativos", value: perfis.length, color: "#3B82F6" },
+          { label: "Usuários cobertos", value: perfis.reduce((total, perfil) => total + perfil.userCount, 0), color: "#14B8A6" },
+          { label: "Perfis do sistema", value: perfis.filter(perfil => perfil.system).length, color: "#8B5CF6" },
+        ].map(item => (
+          <div key={item.label} className="rounded-2xl p-4 flex items-center gap-3" style={cardStyle}>
+            <div className="w-1 h-8 rounded-full" style={{ background: item.color }} />
+            <div>
+              {loading ? <div className="rounded-full" style={{ width: "48px", height: "22px", background: colors.hoverBg }} /> : <p style={{ fontSize: "22px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 700, lineHeight: 1 }}>{item.value}</p>}
+              <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "3px" }}>{item.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: colors.card, border: `1px solid ${colors.border}` }}>
+        <Search size={14} style={{ color: colors.textMuted }} />
+        <input value={search} onChange={event => handleSearch(event.target.value)} placeholder="Buscar perfil..." className="flex-1 bg-transparent outline-none" style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif" }} />
+        {search && <button onClick={() => handleSearch("")} style={{ color: colors.textMuted }}><X size={13} /></button>}
+      </div>
+
+      {error && (
+        <div className="rounded-xl px-4 py-3" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)", color: colors.textSecondary, fontSize: "13px", fontFamily: "'Inter',sans-serif" }}>
+          {error}
+        </div>
+      )}
+
+      <div className="space-y-3">
+        {loading ? (
+          Array.from({ length: 5 }).map((_, index) => (
+            <div key={index} className="rounded-2xl p-5 flex items-center gap-4" style={cardStyle}>
+              <div className="rounded-xl" style={{ width: "40px", height: "40px", background: colors.hoverBg }} />
+              <div className="flex-1">
+                <div className="rounded-full mb-2" style={{ width: "32%", height: "15px", background: colors.hoverBg }} />
+                <div className="rounded-full" style={{ width: "58%", height: "12px", background: colors.hoverBg }} />
+              </div>
+              <span className="rounded-full border-2 animate-spin" style={{ width: "18px", height: "18px", borderColor: "rgba(59,130,246,0.18)", borderTopColor: "#3B82F6" }} />
+            </div>
+          ))
+        ) : perfis.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Shield size={28} style={{ color: colors.textMuted }} />
+            <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Nenhum perfil encontrado</p>
+          </div>
+        ) : perfis.map(perfil => {
+          const isExpanded = expanded === perfil.id;
+
+          return (
+            <div key={perfil.id} className="rounded-2xl overflow-hidden transition-all" style={cardStyle}>
+              <div className="flex items-center justify-between px-5 py-4 cursor-pointer transition-all" onClick={() => setExpanded(isExpanded ? null : perfil.id)} onMouseEnter={event => (event.currentTarget.style.background = colors.hoverBg)} onMouseLeave={event => (event.currentTarget.style.background = "transparent")}>
+                <div className="flex items-center gap-4">
+                  <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: "40px", height: "40px", background: `${perfil.color}20` }}>
+                    <Shield size={18} style={{ color: perfil.color }} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p style={{ fontSize: "15px", color: colors.textPrimary, fontFamily: "'Playfair Display',serif", fontWeight: 600 }}>{perfil.name}</p>
+                      {perfil.system && <span className="rounded-full px-2 py-0.5" style={{ fontSize: "10px", color: "#8B5CF6", background: "rgba(139,92,246,0.12)", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>Sistema</span>}
+                    </div>
+                    <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "2px" }}>{perfil.description}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 shrink-0">
+                  <div className="hidden md:flex items-center gap-1.5">
+                    {perfilActions.map(action => {
+                      const count = perfil.permissions.filter(permission => permission[action.key]).length;
+                      return count > 0 ? <span key={action.key} className="rounded-full px-2 py-0.5" style={{ fontSize: "10px", color: action.color, background: `${action.color}18`, fontFamily: "'Inter',sans-serif", fontWeight: 600 }}>{action.label} {count}</span> : null;
+                    })}
+                  </div>
+
+                  <div className="flex items-center gap-1 rounded-full px-2.5 py-1" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <Users size={11} style={{ color: colors.textMuted }} />
+                    <span style={{ fontSize: "12px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>{perfil.userCount}</span>
+                  </div>
+
+                  <div className="flex items-center gap-1" onClick={event => event.stopPropagation()}>
+                    <button onClick={() => setEditPerfil(perfil)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} onMouseEnter={event => (event.currentTarget.style.color = "#3B82F6")} onMouseLeave={event => (event.currentTarget.style.color = colors.textMuted)}>
+                      <Pencil size={14} />
+                    </button>
+                    {!perfil.system && (
+                      <button onClick={() => setDelPerfil(perfil)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} onMouseEnter={event => (event.currentTarget.style.color = "#EF4444")} onMouseLeave={event => (event.currentTarget.style.color = colors.textMuted)}>
+                        <Trash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  <ChevronRight size={15} style={{ color: colors.textMuted, transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
+                </div>
+              </div>
+
+              {isExpanded && (
+                <div style={{ borderTop: `1px solid ${colors.border}` }}>
+                  <div className="grid px-5 py-2.5" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", background: theme === "dark" ? "rgba(255,255,255,0.02)" : colors.surface, borderBottom: `1px solid ${colors.border}` }}>
+                    <span style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>Módulo</span>
+                    {perfilActions.map(action => <span key={action.key} className="text-center" style={{ fontSize: "11px", color: action.color, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{action.label}</span>)}
+                  </div>
+                  {perfil.permissions.map((permission, index) => (
+                    <div key={permission.module} className="grid items-center px-5 py-3 transition-all" style={{ gridTemplateColumns: "1.8fr 1fr 1fr 1fr 1fr", borderBottom: index < perfil.permissions.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+                      <div className="flex items-center gap-2">
+                        <span style={{ fontSize: "14px" }}>{permission.icon}</span>
+                        <span style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif" }}>{permission.module}</span>
+                      </div>
+                      {perfilActions.map(action => (
+                        <div key={action.key} className="flex justify-center">
+                          <div className="rounded-full flex items-center justify-center" style={{ width: "24px", height: "24px", background: permission[action.key] ? `${action.color}15` : "transparent" }}>
+                            {permission[action.key] ? <CheckCircle2 size={14} style={{ color: action.color }} /> : <div className="rounded-full" style={{ width: "5px", height: "5px", background: colors.border }} />}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {editPerfil !== null && (
+        <PerfilModal perfil={editPerfil === "new" ? null : editPerfil} templatePermissions={templatePermissions} onClose={() => setEditPerfil(null)} onSave={handleSave} />
+      )}
+      {delPerfil && (
+        <DeletePerfilModal perfil={delPerfil} onClose={() => setDelPerfil(null)} onConfirm={handleDelete} />
+      )}
+    </div>
+  );
+}
+
 function PlaHolderSection({ id }: { id: string }) {
   const { colors } = useTheme();
   const item = submenu.find(s => s.id === id);
@@ -703,6 +1172,7 @@ export function Configuracoes() {
   const renderContent = () => {
     switch (active) {
       case "departamentos": return <Departamentos />;
+      case "perfis":        return <PerfisAcesso />;
       case "notificacoes":  return <Notificacoes />;
       case "seguranca":     return <Seguranca />;
       case "integracoes":   return <Integracoes />;
@@ -741,17 +1211,17 @@ export function Configuracoes() {
                     className="w-full flex items-center gap-2.5 rounded-xl px-3 py-2.5 transition-all duration-200 mb-0.5 text-left"
                     style={{
                       background: isActive
-                        ? theme === "dark" ? "rgba(59,130,246,0.15)" : "rgba(59,130,246,0.1)"
+                        ? theme === "dark" ? "rgba(99,102,241,0.15)" : "rgba(99,102,241,0.1)"
                         : "transparent",
-                      borderLeft: `2px solid ${isActive ? "#3B82F6" : "transparent"}`,
+                      borderLeft: `2px solid ${isActive ? "#6366F1" : "transparent"}`,
                       color: isActive ? colors.textPrimary : colors.textSecondary,
                     }}
                   >
-                    <item.icon size={15} style={{ color: isActive ? "#3B82F6" : colors.textMuted, flexShrink: 0 }} />
+                    <item.icon size={15} style={{ color: isActive ? "#6366F1" : colors.textMuted, flexShrink: 0 }} />
                     <span style={{ fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: isActive ? 500 : 400 }}>
                       {item.label}
                     </span>
-                    {isActive && <ChevronRight size={12} style={{ color: "#3B82F6", marginLeft: "auto" }} />}
+                    {isActive && <ChevronRight size={12} style={{ color: "#6366F1", marginLeft: "auto" }} />}
                   </button>
                 );
               })}

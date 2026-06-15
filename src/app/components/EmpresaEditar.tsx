@@ -8,6 +8,7 @@ import {
 import { CompanyPayload, companiesApi, isCompanyAdminUser } from "../services/companiesApi";
 import { mapCompany, statusToApi } from "./companyView";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
 
 const steps = [
   { id: 1, label: "Dados Básicos", icon: Building2, description: "Informações da empresa" },
@@ -380,7 +381,7 @@ export function EmpresaEditar() {
             <button onClick={back} disabled={currentStep === 1} className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all disabled:opacity-30" style={{ color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontSize: 14 }}>
               <ChevronLeft size={15} /> Anterior
             </button>
-            <button onClick={currentStep < steps.length ? next : handleSave} disabled={saving} className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all hover:opacity-90 disabled:opacity-70" style={{ background: currentStep < steps.length ? "linear-gradient(135deg, #6366F1, #4338CA)" : "#10B981", color: "#fff", fontSize: 14, fontWeight: 500 }}>
+            <DefaultButton onClick={currentStep < steps.length ? next : handleSave} disabled={saving} className="px-5 py-2.5">
               {saving ? (
                 <>
                   <span className="rounded-full border-2 animate-spin" style={{ width: 14, height: 14, borderColor: "rgba(255,255,255,0.35)", borderTopColor: "#fff" }} />
@@ -391,7 +392,7 @@ export function EmpresaEditar() {
               ) : (
                 <><Save size={14} /> Salvar Alterações</>
               )}
-            </button>
+            </DefaultButton>
           </div>
         </div>
       </div>

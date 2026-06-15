@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { NovaEmpresaForm, NovaEmpresaModal } from "./NovaEmpresaModal";
+import { DefaultButton } from "./ui/default-button";
 import { fetchCompanies, fetchCompanyMetrics, refreshCompanyMetrics, setPage, setPlano, setSearch, setSegmento, setStatus } from "../store/companiesSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { CompanyView, formatCurrency, mapCompany } from "./companyView";
@@ -143,13 +144,11 @@ function DetailModal({ company, onClose, onDetail, onEdit }: { company: CompanyV
           >
             <Pencil size={14} /> Editar
           </button>
-          <button
+          <DefaultButton
             onClick={onDetail}
-            className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all"
-            style={{ fontSize: "13px", color: "#fff", fontFamily: "'Inter', sans-serif", background: "linear-gradient(135deg, #6366F1, #4338CA)" }}
           >
             Ver detalhes completos <ArrowUpRight size={14} />
-          </button>
+          </DefaultButton>
         </div>
       </div>
     </div>
@@ -267,13 +266,11 @@ export function Empresas() {
             Gerencie todas as empresas cadastradas na plataforma
           </p>
         </div>
-        <button
+        <DefaultButton
           onClick={() => setShowNovaEmpresa(true)}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "14px", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
         >
           <Plus size={16} /> Nova Empresa
-        </button>
+        </DefaultButton>
       </div>
 
       {/* KPIs */}

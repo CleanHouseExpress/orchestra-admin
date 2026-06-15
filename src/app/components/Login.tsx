@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff, Zap, ArrowRight, Lock, Mail } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
 import { login } from "../store/authSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 
@@ -234,19 +235,11 @@ export function Login({ onLogin }: LoginProps) {
             )}
 
             {/* Submit */}
-            <button
+            <DefaultButton
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 rounded-xl transition-all duration-200 hover:opacity-90 active:scale-[0.99] disabled:opacity-60"
-              style={{
-                height: "48px",
-                background: loading ? colors.surface : "linear-gradient(135deg, #6366F1, #4338CA)",
-                color: loading ? colors.textSecondary : "#fff",
-                fontSize: "15px",
-                fontWeight: 500,
-                border: loading ? `1px solid ${colors.border}` : "none",
-                marginTop: "8px",
-              }}
+              className="w-full active:scale-[0.99]"
+              style={{ height: "48px", marginTop: "8px" }}
             >
               {loading ? (
                 <>
@@ -259,7 +252,7 @@ export function Login({ onLogin }: LoginProps) {
                   <ArrowRight size={16} />
                 </>
               )}
-            </button>
+            </DefaultButton>
           </form>
 
           {/* Divider */}

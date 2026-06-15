@@ -8,6 +8,7 @@ import {
   Clock, ArrowUpRight
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from "recharts";
 
 // ── Types ──────────────────────────────────────────────────────────────
@@ -540,11 +541,10 @@ function ComposePanel({ replyTo, onSend, onDiscard }: {
           >
             Descartar
           </button>
-          <button
+          <DefaultButton
             onClick={handleSend}
             disabled={sending || !to || !subject || !body.trim()}
-            className="flex items-center gap-2 rounded-xl px-5 py-2 transition-all hover:opacity-90 disabled:opacity-40"
-            style={{ background: sending ? colors.surface : colors.blue, color: sending ? colors.textSecondary : "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500, border: sending ? `1px solid ${colors.border}` : "none" }}
+            className="px-5"
           >
             {sending ? (
               <>
@@ -554,7 +554,7 @@ function ComposePanel({ replyTo, onSend, onDiscard }: {
             ) : (
               <><Send size={14} /> Enviar</>
             )}
-          </button>
+          </DefaultButton>
         </div>
       </div>
     </div>
@@ -638,14 +638,13 @@ export function EmpresaEmails() {
           {/* Toolbar */}
           <div className="p-3 space-y-2 shrink-0" style={{ borderBottom: `1px solid ${colors.border}` }}>
             {/* Novo e-mail button */}
-            <button
+            <DefaultButton
               onClick={openCompose}
-              className="w-full flex items-center justify-center gap-2 rounded-xl py-2.5 transition-all hover:opacity-90"
-              style={{ background: panelMode === "compose" && !replyTarget ? "linear-gradient(135deg, #6366F1, #4338CA)" : colors.surface, color: panelMode === "compose" && !replyTarget ? "#fff" : colors.blue, border: `1px solid ${panelMode === "compose" && !replyTarget ? "transparent" : "rgba(99,102,241,0.4)"}`, fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 600 }}
+              className="w-full py-2.5"
             >
               <Pencil size={14} />
               Novo E-mail
-            </button>
+            </DefaultButton>
 
             {/* Search */}
             <div className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
@@ -754,12 +753,9 @@ export function EmpresaEmails() {
                   <Mail size={24} style={{ color: colors.textMuted }} />
                 </div>
                 <p style={{ fontSize: "14px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Selecione um e-mail ou escreva um novo</p>
-                <button onClick={openCompose}
-                  className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all hover:opacity-90"
-                  style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-                >
+                <DefaultButton onClick={openCompose}>
                   <Pencil size={13} /> Novo E-mail
-                </button>
+                </DefaultButton>
               </div>
             )}
           </div>

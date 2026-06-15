@@ -5,6 +5,7 @@ import {
   User, Hash, Briefcase, Zap, Star, Rocket, Search, ChevronDown
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
 import { companiesApi } from "../services/companiesApi";
 
 export interface NovaEmpresaForm {
@@ -1334,36 +1335,18 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                 </div>
 
                 {currentStep < steps.length ? (
-                  <button
+                  <DefaultButton
                     onClick={next}
-                    className="flex items-center gap-2 rounded-xl px-5 py-2.5 transition-all"
-                    style={{
-                      background: canContinue ? "linear-gradient(135deg, #6366F1, #4338CA)" : colors.surface,
-                      color: canContinue ? "#fff" : colors.textMuted,
-                      fontSize: "14px",
-                      fontFamily: "'Inter', sans-serif",
-                      fontWeight: 500,
-                      border: canContinue ? "none" : `1px solid ${colors.border}`,
-                      opacity: canContinue ? 1 : 0.72,
-                    }}
+                    disabled={!canContinue}
+                    className="px-5 py-2.5"
                   >
                     Próximo <ChevronRight size={15} />
-                  </button>
+                  </DefaultButton>
                 ) : (
-                  <button
+                  <DefaultButton
                     onClick={handleSave}
-                    disabled={saving}
-                    className="flex items-center gap-2 rounded-xl px-6 py-2.5 transition-all hover:opacity-90 disabled:opacity-70"
-                    style={{
-                      background: saving || !canContinue ? colors.surface : "linear-gradient(135deg, #10B981, #059669)",
-                      color: saving || !canContinue ? colors.textSecondary : "#fff",
-                      fontSize: "14px",
-                      fontFamily: "'Inter', sans-serif",
-                      fontWeight: 500,
-                      border: saving || !canContinue ? `1px solid ${colors.border}` : "none",
-                      boxShadow: saving || !canContinue ? "none" : "0 4px 16px rgba(16,185,129,0.3)",
-                      opacity: canContinue ? 1 : 0.72,
-                    }}
+                    disabled={saving || !canContinue}
+                    className="px-6 py-2.5"
                   >
                     {saving ? (
                       <>
@@ -1373,7 +1356,7 @@ export function NovaEmpresaModal({ onClose, onSave }: NovaEmpresaModalProps) {
                     ) : (
                       <><CheckCircle2 size={15} /> Cadastrar Empresa</>
                     )}
-                  </button>
+                  </DefaultButton>
                 )}
               </div>
             )}

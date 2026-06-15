@@ -1,4 +1,4 @@
-import { Bell, Search, ChevronDown, Command } from "lucide-react";
+import { Bell, Search, ChevronDown, Command, Sun, Moon } from "lucide-react";
 import { useState } from "react";
 import { useTheme } from "./ThemeContext";
 
@@ -12,7 +12,7 @@ const notifications = [
 export function Navbar() {
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const { colors, theme } = useTheme();
+  const { colors, theme, toggle } = useTheme();
 
   const dropdownStyle = {
     background: theme === "dark" ? "rgba(22, 31, 43, 0.98)" : "rgba(255,255,255,0.98)",
@@ -152,6 +152,17 @@ export function Navbar() {
             </div>
           )}
         </div>
+
+        <button
+          onClick={toggle}
+          title={theme === "dark" ? "Ativar tema claro" : "Ativar tema escuro"}
+          className="flex items-center justify-center rounded-xl transition-all duration-200"
+          style={{ width: "40px", height: "40px", border: `1px solid ${colors.border}`, background: "transparent", color: colors.textSecondary }}
+          onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
+          onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
+        >
+          {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
       </div>
     </header>
   );

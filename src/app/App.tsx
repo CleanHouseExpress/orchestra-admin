@@ -11,9 +11,10 @@ import { Usuarios } from "./components/Usuarios";
 import { Configuracoes } from "./components/Configuracoes";
 import { Planos } from "./components/Planos";
 import { Contratos } from "./components/Contratos";
+import { Financeiro } from "./components/Financeiro";
+import { Relatorios } from "./components/Relatorios";
 import { Login } from "./components/Login";
 import { ThemeProvider, useTheme } from "./components/ThemeContext";
-import { ThemeToggle } from "./components/ThemeToggle";
 import { useAppSelector } from "./store/hooks";
 import "../styles/fonts.css";
 
@@ -153,10 +154,10 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
             <Route path="/empresas" element={<Empresas />} />
             <Route path="/empresas/:id" element={<EmpresaDetalhe />} />
             <Route path="/empresas/:id/editar" element={<EmpresaEditar />} />
-            <Route path="/financeiro" element={<EmptyPage title={pageLabels.financial} />} />
+            <Route path="/financeiro" element={<Financeiro />} />
             <Route path="/contratos" element={<Contratos />} />
             <Route path="/planos" element={<Planos />} />
-            <Route path="/relatorios" element={<EmptyPage title={pageLabels.reports} />} />
+            <Route path="/relatorios" element={<Relatorios />} />
             <Route path="/emails" element={<CaixaEmail />} />
             <Route path="/usuarios" element={<Usuarios />} />
             <Route path="/configuracoes" element={<Configuracoes />} />
@@ -184,7 +185,6 @@ export default function App() {
   return (
     <ThemeProvider>
       <BrowserRouter>
-        <ThemeToggle />
         <AppRoutes />
       </BrowserRouter>
     </ThemeProvider>

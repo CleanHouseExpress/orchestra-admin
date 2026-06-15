@@ -7,6 +7,7 @@ import {
   Forward, MoreHorizontal, Plus, Filter, Eye
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
 import { ApiEmailMessage, ApiEmailMetrics, emailsApi } from "../services/emailsApi";
 import { API_BASE_URL } from "../services/apiClient";
 
@@ -589,16 +590,13 @@ function ComposeModal({ replyTo, onClose, onSend }: { replyTo?: EmailRecord | nu
                 <button onClick={onClose} className="rounded-xl px-4 py-2 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
                   Cancelar
                 </button>
-                <button onClick={handleSend} disabled={sending || !to || !subject || !body.trim()}
-                  className="flex items-center gap-2 rounded-xl px-5 py-2 transition-all hover:opacity-90 disabled:opacity-40"
-                  style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-                >
+                <DefaultButton onClick={handleSend} disabled={sending || !to || !subject || !body.trim()} className="px-5">
                   {sending ? (
                     <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} /> Enviando...</>
                   ) : (
                     <><Send size={13} /> Enviar</>
                   )}
-                </button>
+                </DefaultButton>
               </div>
             </div>
           </>
@@ -704,13 +702,11 @@ export function CaixaEmail() {
             E-mails enviados pelo admin para clientes e empresas
           </p>
         </div>
-        <button
+        <DefaultButton
           onClick={() => { setReplyTo(null); setCompose(true); }}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #6366F1, #4338CA)", color: "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
         >
-          <Pencil size={15} /> Novo E-mail
-        </button>
+          <Pencil size={14} /> Novo E-mail
+        </DefaultButton>
       </div>
 
       {error && (

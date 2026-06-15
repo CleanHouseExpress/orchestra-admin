@@ -9,16 +9,31 @@ import { logout } from "../store/authSlice";
 import { useAppDispatch, useAppSelector } from "../store/hooks";
 import { getCompanyUserRoleLabel } from "../services/companiesApi";
 
-const navItems = [
-  { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
-  { icon: Building2, label: "Empresas", id: "companies" },
-  { icon: FileText, label: "Contratos", id: "contracts" },
-  { icon: Wallet, label: "Financeiro", id: "financial" },
-  { icon: CreditCard, label: "Planos", id: "plans" },
-  { icon: BarChart3, label: "Relatórios", id: "reports" },
-  { icon: Mail, label: "Caixa de E-mail", id: "emails" },
-  { icon: UserCog, label: "Usuários", id: "users" },
-  { icon: Settings, label: "Configurações", id: "settings" },
+const navGroups = [
+  {
+    label: "Admin",
+    items: [
+      { icon: LayoutDashboard, label: "Dashboard", id: "dashboard" },
+      { icon: Building2, label: "Empresas", id: "companies" },
+      { icon: FileText, label: "Contratos", id: "contracts" },
+      { icon: Wallet, label: "Financeiro", id: "financial" },
+      { icon: BarChart3, label: "Relatórios", id: "reports" },
+      { icon: Mail, label: "Caixa de E-mail", id: "emails" },
+    ],
+  },
+  {
+    label: "Catálogo",
+    items: [
+      { icon: CreditCard, label: "Planos", id: "plans" },
+    ],
+  },
+  {
+    label: "Sistema",
+    items: [
+      { icon: UserCog, label: "Usuários", id: "users" },
+      { icon: Settings, label: "Configurações", id: "settings" },
+    ],
+  },
 ];
 
 interface SidebarProps {
@@ -75,34 +90,43 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        {navItems.map(({ icon: Icon, label, id }) => {
-          const isActive = activeItem === id;
-          return (
-            <button
-              key={id}
-              onClick={() => onNavigate(id)}
-              className="w-full flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-all duration-200"
-              style={{
-                width: "calc(100% - 16px)",
-                background: isActive
-                  ? theme === "dark"
-                    ? "linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.08) 100%)"
-                    : "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)"
-                  : "transparent",
-                borderLeft: isActive ? `2px solid #6366F1` : "2px solid transparent",
-                color: isActive ? colors.textPrimary : colors.textSecondary,
-              }}
-              title={collapsed ? label : undefined}
-            >
-              <Icon size={18} style={{ color: isActive ? "#6366F1" : colors.textMuted }} className="shrink-0" />
-              {!collapsed && (
-                <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: isActive ? 500 : 400 }}>
-                  {label}
-                </span>
-              )}
-            </button>
-          );
-        })}
+        {navGroups.map((group) => (
+          <div key={group.label} className="mb-3">
+            {!collapsed && (
+              <p className="px-5 pb-2 pt-1" style={{ fontSize: "10px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase" }}>
+                {group.label}
+              </p>
+            )}
+            {group.items.map(({ icon: Icon, label, id }) => {
+              const isActive = activeItem === id;
+              return (
+                <button
+                  key={id}
+                  onClick={() => onNavigate(id)}
+                  className="w-full flex items-center gap-3 px-4 py-3 mx-2 rounded-xl transition-all duration-200"
+                  style={{
+                    width: "calc(100% - 16px)",
+                    background: isActive
+                      ? theme === "dark"
+                        ? "linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(139,92,246,0.08) 100%)"
+                        : "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(139,92,246,0.05) 100%)"
+                      : "transparent",
+                    borderLeft: isActive ? `2px solid #6366F1` : "2px solid transparent",
+                    color: isActive ? colors.textPrimary : colors.textSecondary,
+                  }}
+                  title={collapsed ? `${group.label} · ${label}` : undefined}
+                >
+                  <Icon size={18} style={{ color: isActive ? "#6366F1" : colors.textMuted }} className="shrink-0" />
+                  {!collapsed && (
+                    <span style={{ fontFamily: "'Inter', sans-serif", fontSize: "14px", fontWeight: isActive ? 500 : 400 }}>
+                      {label}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ))}
       </nav>
 
       {/* Collapse toggle */}

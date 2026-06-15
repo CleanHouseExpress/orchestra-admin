@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CreditCard, Plus, Pencil, Trash2, X, CheckCircle2,
   Search, ChevronDown, AlertCircle, CheckCheck, Zap, Star,
@@ -6,6 +6,8 @@ import {
   ToggleLeft, DollarSign, Package, Eye, Copy, MoreHorizontal
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
+import { ApiPlan, plansApi, PlanPayload } from "../services/plansApi";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type BillingCycle = "mensal" | "anual" | "customizado";
@@ -140,11 +142,56 @@ const billingOptions: { value: BillingCycle; label: string }[] = [
   { value: "anual",       label: "Anual"       },
   { value: "customizado", label: "Customizado" },
 ];
+const PRIMARY_COLOR = "#6366F1";
+const PRIMARY_FOCUS = "rgba(99,102,241,0.55)";
+const PRIMARY_SOFT_BG = "rgba(99,102,241,0.1)";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 function priceDisplay(plan: Plan) {
   if (plan.billing === "customizado") return "Sob consulta";
   return `R$ ${plan.price.toLocaleString("pt-BR")}`;
+}
+
+function monthYear(value?: string | null) {
+  if (!value) return "Jun 2026";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    month: "short",
+    year: "numeric",
+  }).format(new Date(value));
+}
+
+function mapApiPlan(plan: ApiPlan): Plan {
+  return {
+    id: plan.id,
+    name: plan.name,
+    description: plan.description ?? "",
+    price: Number(plan.price ?? 0),
+    annualPrice: plan.annual_price ? Number(plan.annual_price) : undefined,
+    billing: plan.billing,
+    status: plan.status,
+    color: plan.color,
+    icon: plan.icon,
+    highlight: plan.highlight,
+    badge: plan.badge ?? undefined,
+    companies: plan.companies_count ?? 0,
+    users: plan.users_count ?? 0,
+    features: plan.features ?? [],
+    limits: {
+      usuarios: plan.limits?.usuarios ?? "",
+      contratos: plan.limits?.contratos ?? "",
+      armazenamento: plan.limits?.armazenamento ?? "",
+      api: plan.limits?.api ?? false,
+      suporte: plan.limits?.suporte ?? "",
+    },
+    createdAt: monthYear(plan.created_at),
+    revenue: plan.revenue ?? "R$ 0",
+  };
+}
+
+function LoadingBlock({ width = "100%", height = 12 }: { width?: string | number; height?: string | number }) {
+  const { colors } = useTheme();
+  return <div className="rounded-full animate-pulse" style={{ width, height, background: colors.hoverBg }} />;
 }
 
 // ── Feature editor ─────────────────────────────────────────────────────
@@ -238,7 +285,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
 
   const inputStyle = (focused = false) => ({
     background: colors.inputBg,
-    border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : colors.border}`,
+    border: `1px solid ${focused ? PRIMARY_FOCUS : colors.border}`,
     borderRadius: "12px",
     height: "44px",
     padding: "0 14px",
@@ -253,8 +300,8 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
     fontSize: "13px",
     fontFamily: "'Inter',sans-serif",
     fontWeight: tab === t ? 600 : 400,
-    color: tab === t ? "#3B82F6" : colors.textMuted,
-    borderBottom: `2px solid ${tab === t ? "#3B82F6" : "transparent"}`,
+    color: tab === t ? PRIMARY_COLOR : colors.textMuted,
+    borderBottom: `2px solid ${tab === t ? PRIMARY_COLOR : "transparent"}`,
     padding: "10px 16px",
     background: "transparent",
     cursor: "pointer",
@@ -352,7 +399,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
                       placeholder="Descreva este plano brevemente..." rows={3}
                       className="w-full rounded-xl px-4 py-3 outline-none resize-none"
                       style={{ background: colors.inputBg, border: `1px solid ${colors.border}`, color: colors.textPrimary, fontSize: "14px", fontFamily: "'Inter',sans-serif", lineHeight: 1.6 }}
-                      onFocus={e => (e.target.style.border = "1px solid rgba(59,130,246,0.55)")}
+                      onFocus={e => (e.target.style.border = `1px solid ${PRIMARY_FOCUS}`)}
                       onBlur={e => (e.target.style.border = `1px solid ${colors.border}`)}
                     />
                   </div>
@@ -445,7 +492,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
                     </div>
                     <button onClick={() => set("highlight")(!form.highlight)}
                       className="rounded-full transition-all duration-300 shrink-0"
-                      style={{ width: "44px", height: "24px", background: form.highlight ? "#3B82F6" : "#64748B", position: "relative" }}
+                      style={{ width: "44px", height: "24px", background: form.highlight ? PRIMARY_COLOR : "#64748B", position: "relative" }}
                     >
                       <div className="absolute top-1 rounded-full bg-white transition-all duration-300"
                         style={{ width: "16px", height: "16px", left: form.highlight ? "24px" : "4px" }}
@@ -494,7 +541,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
                     </div>
                     <button onClick={() => setLimit("api")(!form.limits.api)}
                       className="rounded-full transition-all duration-300 shrink-0"
-                      style={{ width: "44px", height: "24px", background: form.limits.api ? "#3B82F6" : "#64748B", position: "relative" }}
+                      style={{ width: "44px", height: "24px", background: form.limits.api ? PRIMARY_COLOR : "#64748B", position: "relative" }}
                     >
                       <div className="absolute top-1 rounded-full bg-white transition-all duration-300"
                         style={{ width: "16px", height: "16px", left: form.limits.api ? "24px" : "4px" }}
@@ -509,7 +556,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
             <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderTop: `1px solid ${colors.border}` }}>
               <div className="flex gap-1">
                 {["geral","recursos","limites"].map((t, i) => (
-                  <div key={t} className="rounded-full transition-all" style={{ width: tab === t ? "18px" : "6px", height: "6px", background: tab === t ? "#3B82F6" : colors.border }} />
+                  <div key={t} className="rounded-full transition-all" style={{ width: tab === t ? "18px" : "6px", height: "6px", background: tab === t ? PRIMARY_COLOR : colors.border }} />
                 ))}
               </div>
               <div className="flex items-center gap-2">
@@ -519,15 +566,12 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
                 >
                   Cancelar
                 </button>
-                <button onClick={handleSave} disabled={saving}
-                  className="flex items-center gap-2 rounded-xl px-5 py-2 transition-all hover:opacity-90 disabled:opacity-60"
-                  style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500, boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
-                >
+                <DefaultButton onClick={handleSave} disabled={saving} className="px-5">
                   {saving
                     ? <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} />Salvando...</>
                     : <><CheckCheck size={14} />{isEdit ? "Salvar alterações" : "Criar plano"}</>
                   }
-                </button>
+                </DefaultButton>
               </div>
             </div>
           </>
@@ -651,11 +695,9 @@ function PlanDetailModal({ plan, onClose, onEdit }: { plan: Plan; onClose: () =>
             <button onClick={onClose} className="rounded-xl px-4 py-2 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
               Fechar
             </button>
-            <button onClick={onEdit} className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-            >
+            <DefaultButton onClick={onEdit}>
               <Pencil size={13} /> Editar
-            </button>
+            </DefaultButton>
           </div>
         </div>
       </div>
@@ -743,6 +785,30 @@ export function Planos() {
   const [viewPlan, setViewPlan]   = useState<Plan | null>(null);
   const [editPlan, setEditPlan]   = useState<Plan | null | "new">(null);
   const [deletePlan, setDeletePlan] = useState<Plan | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    plansApi.list({ per_page: 100 })
+      .then((response) => {
+        if (!active) return;
+        setPlans(response.data.map(mapApiPlan));
+        setApiError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setApiError(error instanceof Error ? error.message : "Não foi possível carregar os planos.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filtered = plans.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(search.toLowerCase());
@@ -750,14 +816,24 @@ export function Planos() {
     return matchSearch && matchStatus;
   });
 
-  const handleSave = (data: any) => {
+  const handleSave = async (data: PlanPayload) => {
     if (editPlan === "new") {
-      setPlans(prev => [...prev, { id: prev.length + 1, companies: 0, users: 0, createdAt: "Jun 2026", revenue: "R$ 0", ...data }]);
+      const created = await plansApi.create(data);
+      setPlans(prev => [...prev, mapApiPlan(created)]);
     } else if (editPlan) {
-      setPlans(prev => prev.map(p => p.id === editPlan.id ? { ...p, ...data } : p));
+      const updated = await plansApi.update(editPlan.id, data);
+      setPlans(prev => prev.map(p => p.id === editPlan.id ? mapApiPlan(updated) : p));
     }
     setEditPlan(null);
     setViewPlan(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deletePlan) return;
+
+    await plansApi.remove(deletePlan.id);
+    setPlans(p => p.filter(pl => pl.id !== deletePlan.id));
+    setDeletePlan(null);
   };
 
   const kpis = [
@@ -780,8 +856,13 @@ export function Planos() {
         <div>
           <h1 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "26px", fontWeight: 600 }}>Planos</h1>
           <p style={{ fontFamily: "'Inter',sans-serif", color: colors.textMuted, fontSize: "14px", marginTop: "4px" }}>
-            Gerencie os planos de assinatura da plataforma
+            {loading ? "Carregando planos da API..." : "Gerencie os planos de assinatura da plataforma"}
           </p>
+          {apiError && (
+            <p style={{ fontFamily: "'Inter',sans-serif", color: "#F59E0B", fontSize: "12px", marginTop: "4px" }}>
+              Exibindo dados locais: {apiError}
+            </p>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {/* View toggle */}
@@ -789,24 +870,30 @@ export function Planos() {
             {(["cards","table"] as const).map(v => (
               <button key={v} onClick={() => setViewMode(v)}
                 className="px-3 py-2 transition-all"
-                style={{ fontSize: "12px", fontFamily: "'Inter',sans-serif", background: viewMode === v ? "#3B82F6" : colors.surface, color: viewMode === v ? "#fff" : colors.textMuted }}
+                style={{ fontSize: "12px", fontFamily: "'Inter',sans-serif", background: viewMode === v ? PRIMARY_COLOR : colors.surface, color: viewMode === v ? "#fff" : colors.textMuted }}
               >
                 {v === "cards" ? "Cards" : "Tabela"}
               </button>
             ))}
           </div>
-          <button onClick={() => setEditPlan("new")}
-            className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500, boxShadow: "0 4px 16px rgba(59,130,246,0.3)" }}
-          >
+          <DefaultButton onClick={() => setEditPlan("new")}>
             <Plus size={16} /> Novo Plano
-          </button>
+          </DefaultButton>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {kpis.map(k => (
+        {loading ? Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="rounded-2xl p-5 flex items-center gap-3" style={cardStyle}>
+            <LoadingBlock width={40} height={40} />
+            <div className="flex-1 space-y-2">
+              <LoadingBlock width="35%" height={22} />
+              <LoadingBlock width="62%" height={12} />
+              <LoadingBlock width="48%" height={10} />
+            </div>
+          </div>
+        )) : kpis.map(k => (
           <div key={k.label} className="rounded-2xl p-5 flex items-center gap-3 transition-all hover:translate-y-[-2px]" style={cardStyle}>
             <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: "40px", height: "40px", background: `${k.color}15` }}>
               <k.icon size={17} style={{ color: k.color }} />
@@ -834,19 +921,53 @@ export function Planos() {
           {[{ v: "todos", l: "Todos" }, { v: "ativo", l: "Ativos" }, { v: "inativo", l: "Inativos" }, { v: "rascunho", l: "Rascunho" }].map(({ v, l }) => (
             <button key={v} onClick={() => setStatusFilter(v as any)}
               className="rounded-xl px-3 py-2 transition-all"
-              style={{ fontSize: "12px", fontFamily: "'Inter',sans-serif", fontWeight: statusFilter === v ? 500 : 400, background: statusFilter === v ? "#3B82F6" : colors.card, color: statusFilter === v ? "#fff" : colors.textMuted, border: `1px solid ${statusFilter === v ? "#3B82F6" : colors.border}` }}
+              style={{ fontSize: "12px", fontFamily: "'Inter',sans-serif", fontWeight: statusFilter === v ? 500 : 400, background: statusFilter === v ? PRIMARY_COLOR : colors.card, color: statusFilter === v ? "#fff" : colors.textMuted, border: `1px solid ${statusFilter === v ? PRIMARY_COLOR : colors.border}` }}
             >
               {l}
             </button>
           ))}
         </div>
-        <span style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>{filtered.length} plano{filtered.length !== 1 ? "s" : ""}</span>
+        <span style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
+          {loading ? "Carregando..." : `${filtered.length} plano${filtered.length !== 1 ? "s" : ""}`}
+        </span>
       </div>
 
       {/* ── Cards view ── */}
       {viewMode === "cards" && (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filtered.map(plan => {
+          {loading ? Array.from({ length: 6 }).map((_, index) => (
+            <div key={index} className="rounded-2xl overflow-hidden flex flex-col min-h-[360px]" style={cardStyle}>
+              <div className="p-5" style={{ borderBottom: `1px solid ${colors.border}` }}>
+                <div className="flex items-start justify-between mb-4">
+                  <LoadingBlock width={44} height={44} />
+                  <LoadingBlock width={86} height={22} />
+                </div>
+                <div className="space-y-2">
+                  <LoadingBlock width="42%" height={20} />
+                  <LoadingBlock width="88%" height={12} />
+                  <LoadingBlock width="72%" height={12} />
+                </div>
+                <div className="mt-5">
+                  <LoadingBlock width="36%" height={28} />
+                </div>
+              </div>
+              <div className="px-5 py-4 flex-1 space-y-3">
+                {Array.from({ length: 5 }).map((__, itemIndex) => (
+                  <div key={itemIndex} className="flex items-center gap-2">
+                    <LoadingBlock width={14} height={14} />
+                    <LoadingBlock width={`${72 - itemIndex * 7}%`} height={12} />
+                  </div>
+                ))}
+              </div>
+              <div className="px-5 py-4 flex items-center justify-between" style={{ borderTop: `1px solid ${colors.border}` }}>
+                <div className="flex items-center gap-3">
+                  <LoadingBlock width={42} height={14} />
+                  <LoadingBlock width={48} height={14} />
+                </div>
+                <LoadingBlock width={72} height={24} />
+              </div>
+            </div>
+          )) : filtered.map(plan => {
             const st = statusConfig[plan.status];
             const PlanIcon = iconMap[plan.icon] ?? Zap;
             return (
@@ -905,7 +1026,7 @@ export function Planos() {
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all" onClick={e => e.stopPropagation()}>
                     <button onClick={() => setViewPlan(plan)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }}
-                      onMouseEnter={e => (e.currentTarget.style.color = "#3B82F6")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}
+                      onMouseEnter={e => (e.currentTarget.style.color = PRIMARY_COLOR)} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}
                     ><Eye size={14} /></button>
                     <button onClick={() => setEditPlan(plan)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }}
                       onMouseEnter={e => (e.currentTarget.style.color = "#F59E0B")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}
@@ -919,18 +1040,19 @@ export function Planos() {
             );
           })}
 
-          {/* Add card */}
-          <button onClick={() => setEditPlan("new")}
-            className="rounded-2xl flex flex-col items-center justify-center gap-3 transition-all hover:translate-y-[-3px] min-h-[280px]"
-            style={{ border: `2px dashed ${colors.border}`, background: "transparent" }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = "#3B82F6")}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border)}
-          >
-            <div className="rounded-xl flex items-center justify-center" style={{ width: "44px", height: "44px", background: "rgba(59,130,246,0.1)" }}>
-              <Plus size={20} style={{ color: "#3B82F6" }} />
-            </div>
-            <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Novo Plano</p>
-          </button>
+          {!loading && (
+            <button onClick={() => setEditPlan("new")}
+              className="rounded-2xl flex flex-col items-center justify-center gap-3 transition-all hover:translate-y-[-3px] min-h-[280px]"
+              style={{ border: `2px dashed ${colors.border}`, background: "transparent" }}
+              onMouseEnter={e => (e.currentTarget.style.borderColor = PRIMARY_COLOR)}
+              onMouseLeave={e => (e.currentTarget.style.borderColor = colors.border)}
+            >
+              <div className="rounded-xl flex items-center justify-center" style={{ width: "44px", height: "44px", background: PRIMARY_SOFT_BG }}>
+                <Plus size={20} style={{ color: PRIMARY_COLOR }} />
+              </div>
+              <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Novo Plano</p>
+            </button>
+          )}
         </div>
       )}
 
@@ -944,7 +1066,31 @@ export function Planos() {
               <span key={h} style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</span>
             ))}
           </div>
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div>
+              {Array.from({ length: 7 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="grid items-center px-5 py-4"
+                  style={{ gridTemplateColumns: "2fr 1fr 1fr 1fr 1fr 1fr 100px", borderBottom: index < 6 ? `1px solid ${colors.border}` : "none" }}
+                >
+                  <div className="flex items-center gap-3">
+                    <LoadingBlock width={32} height={32} />
+                    <div className="space-y-2 flex-1">
+                      <LoadingBlock width="52%" height={13} />
+                      <LoadingBlock width="35%" height={10} />
+                    </div>
+                  </div>
+                  <LoadingBlock width="54%" height={13} />
+                  <LoadingBlock width="48%" height={12} />
+                  <LoadingBlock width={72} height={22} />
+                  <LoadingBlock width="34%" height={13} />
+                  <LoadingBlock width="42%" height={13} />
+                  <LoadingBlock width={72} height={24} />
+                </div>
+              ))}
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Package size={28} style={{ color: colors.textMuted }} />
               <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Nenhum plano encontrado</p>
@@ -977,7 +1123,7 @@ export function Planos() {
                 <span style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>{plan.companies}</span>
                 <span style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter',sans-serif", fontWeight: 500 }}>{plan.users.toLocaleString("pt-BR")}</span>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all" onClick={e => e.stopPropagation()}>
-                  <button onClick={() => setViewPlan(plan)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} onMouseEnter={e => (e.currentTarget.style.color = "#3B82F6")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}><Eye size={13} /></button>
+                  <button onClick={() => setViewPlan(plan)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} onMouseEnter={e => (e.currentTarget.style.color = PRIMARY_COLOR)} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}><Eye size={13} /></button>
                   <button onClick={() => setEditPlan(plan)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} onMouseEnter={e => (e.currentTarget.style.color = "#F59E0B")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}><Pencil size={13} /></button>
                   <button onClick={() => setDeletePlan(plan)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} onMouseEnter={e => (e.currentTarget.style.color = "#EF4444")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}><Trash2 size={13} /></button>
                 </div>
@@ -995,7 +1141,7 @@ export function Planos() {
         <PlanFormModal plan={editPlan === "new" ? null : editPlan} onClose={() => setEditPlan(null)} onSave={handleSave} />
       )}
       {deletePlan && (
-        <DeletePlanModal plan={deletePlan} onClose={() => setDeletePlan(null)} onConfirm={() => { setPlans(p => p.filter(pl => pl.id !== deletePlan.id)); setDeletePlan(null); }} />
+        <DeletePlanModal plan={deletePlan} onClose={() => setDeletePlan(null)} onConfirm={handleDelete} />
       )}
     </div>
   );

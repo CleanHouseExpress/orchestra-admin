@@ -78,6 +78,7 @@ const light: ThemeColors = {
 };
 
 export const themes = { dark, light };
+const THEME_STORAGE_KEY = "orchestra-admin-theme";
 
 interface ThemeCtx {
   theme: Theme;
@@ -85,11 +86,20 @@ interface ThemeCtx {
   toggle: () => void;
 }
 
-const ThemeContext = createContext<ThemeCtx>({ theme: "dark", colors: dark, toggle: () => {} });
+const ThemeContext = createContext<ThemeCtx>({ theme: "light", colors: light, toggle: () => {} });
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<Theme>("dark");
-  const toggle = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+  const [theme, setTheme] = useState<Theme>(() => {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return stored === "dark" || stored === "light" ? stored : "light";
+  });
+
+  const toggle = () => setTheme((current) => {
+    const next = current === "dark" ? "light" : "dark";
+    window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    return next;
+  });
+
   return (
     <ThemeContext.Provider value={{ theme, colors: themes[theme], toggle }}>
       {children}

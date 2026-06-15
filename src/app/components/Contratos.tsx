@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   FileText, Plus, Search, X, Pencil, Trash2, Eye,
   ChevronDown, CheckCircle2, Clock, XCircle, AlertCircle,
@@ -7,6 +7,8 @@ import {
   RefreshCw, Tag, User, Hash, Paperclip, MoreHorizontal
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
+import { DefaultButton } from "./ui/default-button";
+import { ApiContract, ContractPayload, contractsApi } from "../services/contractsApi";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type ContratoStatus = "ativo" | "pendente" | "encerrado" | "vencendo" | "renovado";
@@ -73,6 +75,83 @@ function fmt(valor: number) {
   return `R$ ${valor.toLocaleString("pt-BR")}`;
 }
 
+function formatDate(value?: string | null) {
+  if (!value) return "";
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return value;
+
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString("pt-BR");
+}
+
+function toApiDate(value?: string) {
+  if (!value) return undefined;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
+  const match = value.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : value;
+}
+
+function daysUntil(value?: string) {
+  if (!value) return undefined;
+  const apiDate = toApiDate(value);
+  if (!apiDate) return undefined;
+  const date = new Date(`${apiDate}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return undefined;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((date.getTime() - today.getTime()) / 86400000);
+}
+
+function mapApiContract(contract: ApiContract): Contrato {
+  const status = contract.status;
+  const dueDate = contract.vencimento ?? contract.due_date;
+
+  return {
+    id: contract.id,
+    numero: contract.numero ?? contract.number ?? `#${contract.id}`,
+    titulo: contract.titulo ?? contract.title,
+    empresa: contract.empresa ?? contract.company_name ?? "—",
+    responsavel: contract.responsavel ?? contract.responsible_name ?? "—",
+    tipo: contract.tipo ?? contract.type,
+    status,
+    valor: Number(contract.valor ?? contract.value ?? 0),
+    recorrencia: contract.recorrencia ?? contract.recurrence,
+    inicio: formatDate(contract.inicio ?? contract.start_date),
+    vencimento: formatDate(dueDate),
+    descricao: contract.descricao ?? contract.description ?? "",
+    renovacaoAuto: contract.renovacaoAuto ?? contract.auto_renew ?? false,
+    diasRestantes: status === "vencendo" ? daysUntil(dueDate ?? undefined) : undefined,
+    tags: contract.tags ?? [],
+  };
+}
+
+function toContractPayload(data: any): ContractPayload {
+  return {
+    numero: data.numero,
+    titulo: data.titulo,
+    empresa: data.empresa,
+    responsavel: data.responsavel,
+    tipo: data.tipo,
+    status: data.status,
+    valor: Number(data.valor ?? 0),
+    recorrencia: data.recorrencia,
+    inicio: toApiDate(data.inicio),
+    vencimento: toApiDate(data.vencimento),
+    descricao: data.descricao,
+    renovacaoAuto: Boolean(data.renovacaoAuto),
+    tags: Array.isArray(data.tags)
+      ? data.tags
+      : String(data.tags ?? "").split(",").map((tag) => tag.trim()).filter(Boolean),
+  };
+}
+
+function LoadingBlock({ width = "100%", height = 12, className = "" }: { width?: string | number; height?: string | number; className?: string }) {
+  const { colors } = useTheme();
+  return <div className={`rounded-full animate-pulse ${className}`} style={{ width, height, background: colors.hoverBg }} />;
+}
+
 // ── Field helpers ──────────────────────────────────────────────────────
 function Field({ label, value, onChange, placeholder, type = "text", icon: Icon, required }: any) {
   const { colors } = useTheme();
@@ -83,9 +162,9 @@ function Field({ label, value, onChange, placeholder, type = "text", icon: Icon,
         {label}{required && <span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>}
       </label>
       <div className="flex items-center gap-2.5 rounded-xl px-3.5 transition-all duration-200"
-        style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none", height: "44px" }}
+        style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px" }}
       >
-        {Icon && <Icon size={15} style={{ color: focused ? "#3B82F6" : colors.textMuted }} className="shrink-0" />}
+        {Icon && <Icon size={15} style={{ color: focused ? "#6366F1" : colors.textMuted }} className="shrink-0" />}
         <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} type={type}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
           className="flex-1 bg-transparent outline-none"
@@ -105,7 +184,7 @@ function Select({ label, value, onChange, options, required }: any) {
         {label}{required && <span style={{ color: "#EF4444", marginLeft: "3px" }}>*</span>}
       </label>
       <div className="relative flex items-center rounded-xl transition-all duration-200"
-        style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(59,130,246,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(59,130,246,0.1)" : "none", height: "44px" }}
+        style={{ background: colors.inputBg, border: `1px solid ${focused ? "rgba(99,102,241,0.55)" : colors.border}`, boxShadow: focused ? "0 0 0 3px rgba(99,102,241,0.1)" : "none", height: "44px" }}
       >
         <select value={value} onChange={e => onChange(e.target.value)}
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)}
@@ -254,11 +333,9 @@ function ContratoViewModal({ contrato, onClose, onEdit }: { contrato: Contrato; 
             <button onClick={onClose} className="rounded-xl px-4 py-2 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
               Fechar
             </button>
-            <button onClick={onEdit} className="flex items-center gap-2 rounded-xl px-4 py-2 hover:opacity-90 transition-all"
-              style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
-            >
+            <DefaultButton onClick={onEdit}>
               <Pencil size={13} /> Editar
-            </button>
+            </DefaultButton>
           </div>
         </div>
       </div>
@@ -267,7 +344,7 @@ function ContratoViewModal({ contrato, onClose, onEdit }: { contrato: Contrato; 
 }
 
 // ── Form modal ─────────────────────────────────────────────────────────
-function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato | null; onClose: () => void; onSave: (d: any) => void }) {
+function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato | null; onClose: () => void; onSave: (d: any) => void | Promise<void> }) {
   const { colors, theme } = useTheme();
   const isEdit = !!contrato;
 
@@ -301,15 +378,18 @@ function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato 
     return !Object.keys(e).length;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validate()) return;
     setSaving(true);
-    setTimeout(() => {
+    const data = { ...form, valor: Number(form.valor), tags: form.tags.split(",").map(t => t.trim()).filter(Boolean) };
+
+    try {
+      await onSave(data);
       setSaving(false);
       setSaved(true);
-      const data = { ...form, valor: Number(form.valor), tags: form.tags.split(",").map(t => t.trim()).filter(Boolean) };
-      setTimeout(() => onSave(data), 900);
-    }, 1300);
+    } catch {
+      setSaving(false);
+    }
   };
 
   return (
@@ -324,7 +404,7 @@ function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderBottom: `1px solid ${colors.border}` }}>
           <div className="flex items-center gap-3">
-            <div className="rounded-xl flex items-center justify-center" style={{ width: "34px", height: "34px", background: "linear-gradient(135deg, #3B82F6, #14B8A6)" }}>
+            <div className="rounded-xl flex items-center justify-center" style={{ width: "34px", height: "34px", background: "linear-gradient(135deg, #6366F1, #4338CA)" }}>
               <FileText size={16} color="#fff" />
             </div>
             <h2 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "18px", fontWeight: 600 }}>
@@ -406,7 +486,7 @@ function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato 
                 </div>
                 <button onClick={() => set("renovacaoAuto")(!form.renovacaoAuto)}
                   className="rounded-full transition-all duration-300 shrink-0"
-                  style={{ width: "44px", height: "24px", background: form.renovacaoAuto ? "#3B82F6" : "#64748B", position: "relative" }}
+                  style={{ width: "44px", height: "24px", background: form.renovacaoAuto ? "#6366F1" : "#64748B", position: "relative" }}
                 >
                   <div className="absolute top-1 rounded-full bg-white transition-all duration-300"
                     style={{ width: "16px", height: "16px", left: form.renovacaoAuto ? "24px" : "4px" }}
@@ -423,15 +503,12 @@ function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato 
               >
                 Cancelar
               </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 rounded-xl px-5 py-2 transition-all hover:opacity-90 disabled:opacity-60"
-                style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500, boxShadow: "0 4px 14px rgba(59,130,246,0.3)" }}
-              >
+              <DefaultButton onClick={handleSave} disabled={saving} className="px-5">
                 {saving
                   ? <><span className="rounded-full border-2 animate-spin" style={{ width: "12px", height: "12px", borderColor: "rgba(255,255,255,0.3)", borderTopColor: "#fff" }} />Salvando...</>
                   : <><CheckCheck size={14} />{isEdit ? "Salvar alterações" : "Criar contrato"}</>
                 }
-              </button>
+              </DefaultButton>
             </div>
           </>
         )}
@@ -441,9 +518,19 @@ function ContratoFormModal({ contrato, onClose, onSave }: { contrato?: Contrato 
 }
 
 // ── Delete modal ───────────────────────────────────────────────────────
-function DeleteModal({ contrato, onClose, onConfirm }: { contrato: Contrato; onClose: () => void; onConfirm: () => void }) {
+function DeleteModal({ contrato, onClose, onConfirm }: { contrato: Contrato; onClose: () => void; onConfirm: () => void | Promise<void> }) {
   const { colors } = useTheme();
   const [deleting, setDeleting] = useState(false);
+
+  const handleConfirm = async () => {
+    setDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: "rgba(0,0,0,0.65)", backdropFilter: "blur(8px)" }}
@@ -475,7 +562,7 @@ function DeleteModal({ contrato, onClose, onConfirm }: { contrato: Contrato; onC
           <button onClick={onClose} className="flex-1 rounded-xl py-2.5 transition-all" style={{ fontSize: "13px", color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontFamily: "'Inter',sans-serif" }}>
             Cancelar
           </button>
-          <button onClick={() => { setDeleting(true); setTimeout(() => { setDeleting(false); onConfirm(); }, 900); }} disabled={deleting}
+          <button onClick={handleConfirm} disabled={deleting}
             className="flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 hover:opacity-90 disabled:opacity-60 transition-all"
             style={{ background: "#EF4444", color: "#fff", fontSize: "13px", fontFamily: "'Inter',sans-serif", fontWeight: 500 }}
           >
@@ -501,6 +588,30 @@ export function Contratos() {
   const [viewContrato, setViewContrato] = useState<Contrato | null>(null);
   const [editContrato, setEditContrato] = useState<Contrato | null | "new">(null);
   const [deleteContrato, setDeleteContrato] = useState<Contrato | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    contractsApi.list({ per_page: 100 })
+      .then((response) => {
+        if (!active) return;
+        setContratos(response.data.map(mapApiContract));
+        setApiError(null);
+      })
+      .catch((error) => {
+        if (!active) return;
+        setApiError(error instanceof Error ? error.message : "Não foi possível carregar os contratos.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const filtered = contratos.filter(c => {
     const q = search.toLowerCase();
@@ -510,18 +621,30 @@ export function Contratos() {
     return matchSearch && matchStatus && matchTipo;
   });
 
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
   const paginated  = filtered.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE);
 
-  const handleSave = (data: any) => {
+  const handleSave = async (data: any) => {
+    const payload = toContractPayload(data);
+
     if (editContrato === "new") {
-      const num = `#${3000 + contratos.length + 1}`;
-      setContratos(prev => [{ id: prev.length + 1, numero: num, diasRestantes: undefined, ...data }, ...prev]);
+      const created = await contractsApi.create(payload);
+      setContratos(prev => [mapApiContract(created), ...prev]);
     } else if (editContrato) {
-      setContratos(prev => prev.map(c => c.id === editContrato.id ? { ...c, ...data } : c));
+      const updated = await contractsApi.update(editContrato.id, payload);
+      setContratos(prev => prev.map(c => c.id === editContrato.id ? mapApiContract(updated) : c));
     }
+
     setEditContrato(null);
     setViewContrato(null);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteContrato) return;
+
+    await contractsApi.remove(deleteContrato.id);
+    setContratos(prev => prev.filter(c => c.id !== deleteContrato.id));
+    setDeleteContrato(null);
   };
 
   const kpis = [
@@ -544,20 +667,33 @@ export function Contratos() {
         <div>
           <h1 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "26px", fontWeight: 600 }}>Contratos</h1>
           <p style={{ fontFamily: "'Inter',sans-serif", color: colors.textMuted, fontSize: "14px", marginTop: "4px" }}>
-            Gerencie todos os contratos ativos e vigentes
+            {loading ? "Carregando contratos da API..." : "Gerencie todos os contratos ativos e vigentes"}
           </p>
         </div>
-        <button onClick={() => setEditContrato("new")}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 transition-all hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #3B82F6, #2563EB)", color: "#fff", fontSize: "14px", fontFamily: "'Inter',sans-serif", fontWeight: 500, boxShadow: "0 4px 16px rgba(59,130,246,0.3)" }}
-        >
+        <DefaultButton onClick={() => setEditContrato("new")}>
           <Plus size={16} /> Novo Contrato
-        </button>
+        </DefaultButton>
       </div>
+
+      {apiError && (
+        <div className="flex items-center gap-2 rounded-xl px-4 py-3" style={{ background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.25)", color: "#F59E0B", fontFamily: "'Inter',sans-serif", fontSize: "13px" }}>
+          <AlertCircle size={15} />
+          Exibindo dados locais: {apiError}
+        </div>
+      )}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-        {kpis.map(k => (
+        {loading ? Array.from({ length: 4 }).map((_, index) => (
+          <div key={index} className="rounded-2xl p-5 flex items-center gap-3" style={cardStyle}>
+            <LoadingBlock width={40} height={40} className="rounded-xl shrink-0" />
+            <div className="flex-1 space-y-2">
+              <LoadingBlock width="45%" height={20} />
+              <LoadingBlock width="70%" height={12} />
+              <LoadingBlock width="50%" height={10} />
+            </div>
+          </div>
+        )) : kpis.map(k => (
           <div key={k.label} className="rounded-2xl p-5 flex items-center gap-3 transition-all hover:translate-y-[-2px]" style={cardStyle}>
             <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: "40px", height: "40px", background: `${k.color}15` }}>
               <k.icon size={17} style={{ color: k.color }} />
@@ -573,7 +709,7 @@ export function Contratos() {
 
       {/* Status pills */}
       <div className="flex flex-wrap gap-2">
-        {[{ v: "todos", l: "Todos", color: "#3B82F6" }, ...Object.entries(statusConfig).map(([v, c]) => ({ v, l: c.label, color: c.color }))].map(({ v, l, color }) => {
+        {[{ v: "todos", l: "Todos", color: "#6366F1" }, ...Object.entries(statusConfig).map(([v, c]) => ({ v, l: c.label, color: c.color }))].map(({ v, l, color }) => {
           const count = v === "todos" ? contratos.length : contratos.filter(c => c.status === v).length;
           const isActive = statusFilter === v;
           return (
@@ -604,7 +740,7 @@ export function Contratos() {
           <div className="relative">
             <select value={tipoFilter} onChange={e => { setTipoFilter(e.target.value as any); setPage(1); }}
               className="appearance-none rounded-xl px-3 py-2 pr-8 outline-none cursor-pointer"
-              style={{ background: colors.surface, border: `1px solid ${tipoFilter !== "todos" ? "#3B82F6" : colors.border}`, color: tipoFilter !== "todos" ? "#3B82F6" : colors.textSecondary, fontSize: "13px", fontFamily: "'Inter',sans-serif" }}
+              style={{ background: colors.surface, border: `1px solid ${tipoFilter !== "todos" ? "#6366F1" : colors.border}`, color: tipoFilter !== "todos" ? "#6366F1" : colors.textSecondary, fontSize: "13px", fontFamily: "'Inter',sans-serif" }}
             >
               <option value="todos">Tipo</option>
               {tipoOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
@@ -612,7 +748,7 @@ export function Contratos() {
             <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: colors.textMuted }} />
           </div>
           <span style={{ marginLeft: "auto", fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
-            {filtered.length} contrato{filtered.length !== 1 ? "s" : ""}
+            {loading ? "Carregando..." : `${filtered.length} contrato${filtered.length !== 1 ? "s" : ""}`}
           </span>
         </div>
       </div>
@@ -627,7 +763,31 @@ export function Contratos() {
           ))}
         </div>
 
-        {paginated.length === 0 ? (
+        {loading ? (
+          <div>
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div key={index}
+                className="grid items-center px-5 py-4"
+                style={{ gridTemplateColumns: "80px 2.2fr 1.4fr 1fr 1fr 1fr 1fr 100px", borderBottom: index === 7 ? "none" : `1px solid ${colors.border}` }}
+              >
+                <LoadingBlock width={44} />
+                <div className="space-y-2 pr-3">
+                  <LoadingBlock width="65%" />
+                  <LoadingBlock width="40%" height={10} />
+                </div>
+                <LoadingBlock width="70%" />
+                <LoadingBlock width={68} height={22} />
+                <LoadingBlock width={72} height={22} />
+                <LoadingBlock width={78} />
+                <LoadingBlock width={72} />
+                <div className="flex gap-2">
+                  <LoadingBlock width={24} height={24} />
+                  <LoadingBlock width={24} height={24} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : paginated.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 gap-3">
             <FileText size={32} style={{ color: colors.textMuted }} />
             <p style={{ fontSize: "14px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>Nenhum contrato encontrado</p>
@@ -693,7 +853,7 @@ export function Contratos() {
               {/* Ações */}
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all" onClick={e => e.stopPropagation()}>
                 <button onClick={() => setViewContrato(c)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} title="Ver"
-                  onMouseEnter={e => (e.currentTarget.style.color = "#3B82F6")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}>
+                  onMouseEnter={e => (e.currentTarget.style.color = "#6366F1")} onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}>
                   <Eye size={14} />
                 </button>
                 <button onClick={() => setEditContrato(c)} className="rounded-lg p-1.5 transition-all" style={{ color: colors.textMuted }} title="Editar"
@@ -710,7 +870,7 @@ export function Contratos() {
         })}
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {!loading && totalPages > 1 && (
           <div className="flex items-center justify-between px-5 py-4" style={{ borderTop: `1px solid ${colors.border}` }}>
             <span style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
               Página {page} de {totalPages} — {filtered.length} resultados
@@ -725,7 +885,7 @@ export function Contratos() {
               {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
                 <button key={n} onClick={() => setPage(n)}
                   className="rounded-lg transition-all"
-                  style={{ width: "32px", height: "32px", fontSize: "13px", fontFamily: "'Inter',sans-serif", background: n === page ? "#3B82F6" : colors.surface, color: n === page ? "#fff" : colors.textSecondary, border: `1px solid ${n === page ? "#3B82F6" : colors.border}`, fontWeight: n === page ? 600 : 400 }}
+                  style={{ width: "32px", height: "32px", fontSize: "13px", fontFamily: "'Inter',sans-serif", background: n === page ? "linear-gradient(135deg, #6366F1, #4338CA)" : colors.surface, color: n === page ? "#fff" : colors.textSecondary, border: `1px solid ${n === page ? "#6366F1" : colors.border}`, fontWeight: n === page ? 600 : 400 }}
                 >
                   {n}
                 </button>
@@ -760,7 +920,7 @@ export function Contratos() {
         <DeleteModal
           contrato={deleteContrato}
           onClose={() => setDeleteContrato(null)}
-          onConfirm={() => { setContratos(p => p.filter(c => c.id !== deleteContrato.id)); setDeleteContrato(null); }}
+          onConfirm={handleDelete}
         />
       )}
     </div>
