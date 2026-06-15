@@ -145,6 +145,7 @@ interface ThemeCtx {
   colors: ThemeColors;
   toggle: () => void;
   modules: ModuleConfig[];
+  modulesLoaded: boolean;
   setModuleEnabled: (id: string, enabled: boolean) => void;
   syncModulesFromApi: (apiModules: ThemeApiModule[], options?: SyncModulesOptions) => void;
 }
@@ -154,6 +155,7 @@ const ThemeContext = createContext<ThemeCtx>({
   colors: light,
   toggle: () => {},
   modules: defaultModules,
+  modulesLoaded: false,
   setModuleEnabled: () => {},
   syncModulesFromApi: () => {},
 });
@@ -164,6 +166,7 @@ export function ThemeProvider({ children, authToken }: { children: ReactNode; au
     return stored === "dark" || stored === "light" ? stored : "light";
   });
   const [modules, setModules] = useState<ModuleConfig[]>(getInitialModules);
+  const [modulesLoaded, setModulesLoaded] = useState(false);
 
   const toggle = () => setTheme((current) => {
     const next = current === "dark" ? "light" : "dark";
@@ -206,10 +209,14 @@ export function ThemeProvider({ children, authToken }: { children: ReactNode; au
   }, []);
 
   useEffect(() => {
-    if (!authToken) return;
+    if (!authToken) {
+      setModulesLoaded(false);
+      return;
+    }
 
     let active = true;
 
+    setModulesLoaded(false);
     setModules((current) => current.map((module) => ({ ...module, enabled: false })));
 
     modulesApi.myList()
@@ -222,7 +229,10 @@ export function ThemeProvider({ children, authToken }: { children: ReactNode; au
           });
         }
       })
-      .catch(() => undefined);
+      .catch(() => undefined)
+      .finally(() => {
+        if (active) setModulesLoaded(true);
+      });
 
     return () => {
       active = false;
@@ -230,7 +240,7 @@ export function ThemeProvider({ children, authToken }: { children: ReactNode; au
   }, [authToken, syncModulesFromApi]);
 
   return (
-    <ThemeContext.Provider value={{ theme, colors: themes[theme], toggle, modules, setModuleEnabled, syncModulesFromApi }}>
+    <ThemeContext.Provider value={{ theme, colors: themes[theme], toggle, modules, modulesLoaded, setModuleEnabled, syncModulesFromApi }}>
       {children}
     </ThemeContext.Provider>
   );

@@ -98,6 +98,18 @@ function RouteProgress({ active }: { active: boolean }) {
   );
 }
 
+function AccessPlaceholder({ text }: { text: string }) {
+  const { colors } = useTheme();
+
+  return (
+    <div className="flex-1 flex items-center justify-center">
+      <p style={{ color: colors.textMuted, fontFamily: "'Inter', sans-serif", fontSize: "14px" }}>
+        {text}
+      </p>
+    </div>
+  );
+}
+
 function LoginRoute({ authenticated }: { authenticated: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -113,11 +125,16 @@ function LoginRoute({ authenticated }: { authenticated: boolean }) {
 function AppShell({ authenticated }: { authenticated: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { colors } = useTheme();
+  const { colors, modules, modulesLoaded } = useTheme();
   const [routeLoading, setRouteLoading] = useState(false);
   const activePage = location.pathname.startsWith("/empresas")
     ? "companies"
     : pathPages[location.pathname] ?? "dashboard";
+  const activeModule = modules.find((module) => module.id === activePage);
+  const firstEnabledPage = Object.keys(pageRoutes).find((page) =>
+    modules.some((module) => module.id === page && module.enabled)
+  );
+  const currentModuleAllowed = Boolean(activeModule?.enabled);
 
   useEffect(() => {
     setRouteLoading(true);
@@ -125,6 +142,16 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
 
     return () => window.clearTimeout(timeout);
   }, [location.pathname]);
+
+  useEffect(() => {
+    if (!authenticated || !modulesLoaded || currentModuleAllowed) return;
+
+    const fallbackPath = firstEnabledPage ? pageRoutes[firstEnabledPage] : null;
+
+    if (fallbackPath && fallbackPath !== location.pathname) {
+      startTransition(() => navigate(fallbackPath, { replace: true }));
+    }
+  }, [authenticated, currentModuleAllowed, firstEnabledPage, location.pathname, modulesLoaded, navigate]);
 
   if (!authenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
@@ -149,20 +176,26 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
         <Navbar />
         <main className="relative flex-1 overflow-hidden flex flex-col" style={{ background: colors.bg }}>
           <RouteProgress active={routeLoading} />
-          <Routes>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/empresas" element={<Empresas />} />
-            <Route path="/empresas/:id" element={<EmpresaDetalhe />} />
-            <Route path="/empresas/:id/editar" element={<EmpresaEditar />} />
-            <Route path="/financeiro" element={<Financeiro />} />
-            <Route path="/contratos" element={<Contratos />} />
-            <Route path="/planos" element={<Planos />} />
-            <Route path="/relatorios" element={<Relatorios />} />
-            <Route path="/emails" element={<CaixaEmail />} />
-            <Route path="/usuarios" element={<Usuarios />} />
-            <Route path="/configuracoes" element={<Configuracoes />} />
-            <Route path="*" element={<Navigate to="/dashboard" replace />} />
-          </Routes>
+          {!modulesLoaded ? (
+            <AccessPlaceholder text="Carregando módulos..." />
+          ) : !currentModuleAllowed ? (
+            <AccessPlaceholder text={firstEnabledPage ? "Redirecionando..." : "Nenhum módulo disponível para este usuário."} />
+          ) : (
+            <Routes>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/empresas" element={<Empresas />} />
+              <Route path="/empresas/:id" element={<EmpresaDetalhe />} />
+              <Route path="/empresas/:id/editar" element={<EmpresaEditar />} />
+              <Route path="/financeiro" element={<Financeiro />} />
+              <Route path="/contratos" element={<Contratos />} />
+              <Route path="/planos" element={<Planos />} />
+              <Route path="/relatorios" element={<Relatorios />} />
+              <Route path="/emails" element={<CaixaEmail />} />
+              <Route path="/usuarios" element={<Usuarios />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="*" element={<Navigate to={firstEnabledPage ? pageRoutes[firstEnabledPage] : "/dashboard"} replace />} />
+            </Routes>
+          )}
         </main>
       </div>
     </div>
