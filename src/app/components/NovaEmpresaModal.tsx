@@ -48,11 +48,13 @@ const creationChecklist = [
   { event: "company_created", label: "Criando empresa" },
   { event: "address_saved", label: "Processando endereço" },
   { event: "subdomain_saved", label: "Vinculando subdomínio" },
+  { event: "contract_created", label: "Criando contrato inicial" },
   { event: "modules_synced", label: "Vinculando módulos" },
   { event: "admin_created", label: "Criando administrador" },
   { event: "tenant_provisioned", label: "Provisionando tenant" },
-  { event: "audit_logged", label: "Registrando auditoria" },
   { event: "committed", label: "Confirmando transação" },
+  { event: "email_sending", label: "Enviando primeiro acesso" },
+  { event: ["email_sent", "email_failed"], label: "Finalizando e-mail" },
   { event: "completed", label: "Cadastro concluído" },
 ];
 
@@ -381,7 +383,12 @@ function CreationChecklist({ events, failed, running }: { events: CompanyCreatio
   const { colors } = useTheme();
   const receivedEvents = new Set(events.map(item => item.event));
   const failedMessage = events.find(item => item.event === "failed")?.data?.message;
-  const nextEvent = creationChecklist.find(item => !receivedEvents.has(item.event))?.event;
+  const isStepDone = (event: string | string[]) => Array.isArray(event)
+    ? event.some(item => receivedEvents.has(item))
+    : receivedEvents.has(event);
+  const stepKey = (event: string | string[]) => Array.isArray(event) ? event.join("|") : event;
+  const nextEvent = creationChecklist.find(item => !isStepDone(item.event))?.event;
+  const doneSteps = creationChecklist.filter(item => isStepDone(item.event)).length;
 
   return (
     <div className="rounded-2xl p-4 space-y-3" style={{ background: colors.card, border: `1px solid ${colors.border}` }}>
@@ -390,17 +397,17 @@ function CreationChecklist({ events, failed, running }: { events: CompanyCreatio
           Progresso do cadastro
         </span>
         <span style={{ fontSize: "12px", color: failed ? "#EF4444" : colors.textMuted }}>
-          {receivedEvents.size}/{creationChecklist.length}
+          {doneSteps}/{creationChecklist.length}
         </span>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
         {creationChecklist.map((item) => {
-          const done = receivedEvents.has(item.event);
-          const active = running && !failed && !done && nextEvent === item.event;
+          const done = isStepDone(item.event);
+          const active = running && !failed && !done && stepKey(nextEvent ?? "") === stepKey(item.event);
 
           return (
-            <div key={item.event} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: done ? "rgba(16,185,129,0.08)" : colors.surface }}>
+            <div key={stepKey(item.event)} className="flex items-center gap-2 rounded-xl px-3 py-2" style={{ background: done ? "rgba(16,185,129,0.08)" : colors.surface }}>
               {done ? (
                 <CheckCircle2 size={14} style={{ color: "#10B981" }} className="shrink-0" />
               ) : active ? (

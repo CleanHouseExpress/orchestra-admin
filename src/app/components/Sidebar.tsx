@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   LayoutDashboard, Building2, Wallet, FileText,
   CreditCard, BarChart3, UserCog, Settings, ChevronLeft,
-  ChevronRight, Zap, LogOut, Mail
+  ChevronRight, Zap, LogOut, Mail, ShieldCheck, Sliders
 } from "lucide-react";
 import { useTheme } from "./ThemeContext";
 import { logout } from "../store/authSlice";
@@ -25,12 +25,14 @@ const navGroups = [
     label: "Catálogo",
     items: [
       { icon: CreditCard, label: "Planos", id: "plans" },
+      { icon: Sliders, label: "Módulos", id: "modules" },
     ],
   },
   {
     label: "Sistema",
     items: [
       { icon: UserCog, label: "Usuários", id: "users" },
+      { icon: ShieldCheck, label: "Auditoria", id: "audit" },
       { icon: Settings, label: "Configurações", id: "settings" },
     ],
   },
@@ -92,6 +94,8 @@ export function Sidebar({ activeItem, onNavigate }: SidebarProps) {
       <nav className="flex-1 py-4 overflow-y-auto">
         {navGroups.map((group) => {
           const visibleItems = group.items.filter((item) => {
+            if (item.id === "audit" || item.id === "modules") return true;
+
             const module = modules.find((moduleItem) => moduleItem.id === item.id);
             return Boolean(module?.enabled);
           });

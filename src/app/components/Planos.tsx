@@ -8,6 +8,7 @@ import {
 import { useTheme } from "./ThemeContext";
 import { DefaultButton } from "./ui/default-button";
 import { ApiPlan, plansApi, PlanPayload } from "../services/plansApi";
+import { ApiCompanyModule, companyModulesApi } from "../services/companyModulesApi";
 
 // ── Types ──────────────────────────────────────────────────────────────
 type BillingCycle = "mensal" | "anual" | "customizado";
@@ -33,6 +34,7 @@ interface Plan {
   badge?: string;
   companies: number;
   users: number;
+  modules: ApiCompanyModule[];
   features: PlanFeature[];
   limits: {
     usuarios: string;
@@ -52,6 +54,7 @@ const initialPlans: Plan[] = [
     price: 299, annualPrice: 249, billing: "mensal", status: "ativo",
     color: "#94A3B8", icon: "zap", highlight: false,
     companies: 48, users: 312, createdAt: "Jan 2023", revenue: "R$ 14.352",
+    modules: [],
     limits: { usuarios: "20", contratos: "5", armazenamento: "5 GB", api: false, suporte: "E-mail" },
     features: [
       { label: "Dashboard básico",         included: true  },
@@ -70,6 +73,7 @@ const initialPlans: Plan[] = [
     price: 799, annualPrice: 649, billing: "mensal", status: "ativo",
     color: "#14B8A6", icon: "star", highlight: true, badge: "Mais popular",
     companies: 87, users: 1240, createdAt: "Jan 2023", revenue: "R$ 69.513",
+    modules: [],
     limits: { usuarios: "100", contratos: "Ilimitados", armazenamento: "50 GB", api: true, suporte: "Prioritário" },
     features: [
       { label: "Dashboard avançado",        included: true  },
@@ -88,6 +92,7 @@ const initialPlans: Plan[] = [
     price: 0, billing: "customizado", status: "ativo",
     color: "#3B82F6", icon: "rocket", highlight: false, badge: "Sob consulta",
     companies: 23, users: 892, createdAt: "Mar 2023", revenue: "R$ 86.700",
+    modules: [],
     limits: { usuarios: "Ilimitados", contratos: "Ilimitados", armazenamento: "500 GB", api: true, suporte: "Gerente 24/7" },
     features: [
       { label: "Dashboard personalizado",   included: true  },
@@ -106,6 +111,7 @@ const initialPlans: Plan[] = [
     price: 99, billing: "mensal", status: "rascunho",
     color: "#F59E0B", icon: "zap", highlight: false,
     companies: 0, users: 0, createdAt: "Jun 2026", revenue: "R$ 0",
+    modules: [],
     limits: { usuarios: "5", contratos: "2", armazenamento: "1 GB", api: false, suporte: "FAQ" },
     features: [
       { label: "Dashboard básico",          included: true  },
@@ -176,6 +182,7 @@ function mapApiPlan(plan: ApiPlan): Plan {
     badge: plan.badge ?? undefined,
     companies: plan.companies_count ?? 0,
     users: plan.users_count ?? 0,
+    modules: plan.modules ?? [],
     features: plan.features ?? [],
     limits: {
       usuarios: plan.limits?.usuarios ?? "",
@@ -233,6 +240,9 @@ function FeatureEditor({ features, onChange }: { features: PlanFeature[]; onChan
 function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose: () => void; onSave: (data: any) => void }) {
   const { colors, theme } = useTheme();
   const isEdit = !!plan;
+  const [globalModules, setGlobalModules] = useState<ApiCompanyModule[]>([]);
+  const [modulesLoading, setModulesLoading] = useState(true);
+  const [modulesError, setModulesError] = useState("");
   const defaultFeatures: PlanFeature[] = [
     { label: "Dashboard",            included: true  },
     { label: "Gestão de contratos",  included: true  },
@@ -258,15 +268,47 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
     badge:       plan?.badge       ?? "",
     limits: plan?.limits ?? { usuarios: "", contratos: "", armazenamento: "", api: false, suporte: "" },
     features:    plan?.features    ?? defaultFeatures,
+    modules:     plan?.modules?.map(module => module.id) ?? [],
   });
 
-  const [tab, setTab]       = useState<"geral" | "recursos" | "limites">("geral");
+  const [tab, setTab]       = useState<"geral" | "modulos" | "recursos" | "limites">("geral");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved]   = useState(false);
 
   const set = (k: string) => (v: any) => setForm(f => ({ ...f, [k]: v }));
   const setLimit = (k: string) => (v: any) => setForm(f => ({ ...f, limits: { ...f.limits, [k]: v } }));
+
+  useEffect(() => {
+    let active = true;
+
+    companyModulesApi.list({ per_page: 100 })
+      .then((response) => {
+        if (!active) return;
+        setGlobalModules(response.data.filter(module => module.is_active));
+        setModulesError("");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setModulesError(error instanceof Error ? error.message : "Não foi possível carregar módulos globais.");
+      })
+      .finally(() => {
+        if (active) setModulesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleModule = (moduleId: number) => {
+    setForm(current => ({
+      ...current,
+      modules: current.modules.includes(moduleId)
+        ? current.modules.filter(id => id !== moduleId)
+        : [...current.modules, moduleId],
+    }));
+  };
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -348,7 +390,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
           <>
             {/* Tabs */}
             <div className="flex shrink-0" style={{ borderBottom: `1px solid ${colors.border}` }}>
-              {[["geral","Geral"],["recursos","Recursos"],["limites","Limites"]].map(([id, label]) => (
+              {[["geral","Geral"],["modulos","Módulos"],["recursos","Recursos"],["limites","Limites"]].map(([id, label]) => (
                 <button key={id} onClick={() => setTab(id as any)} style={tabStyle(id)}>{label}</button>
               ))}
             </div>
@@ -502,6 +544,70 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
                 </div>
               )}
 
+              {/* ── Tab Módulos ── */}
+              {tab === "modulos" && (
+                <div className="space-y-4">
+                  <div>
+                    <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif" }}>
+                      Selecione quais módulos globais entram neste plano.
+                    </p>
+                    <p style={{ fontSize: "12px", color: colors.textSecondary, fontFamily: "'Inter',sans-serif", marginTop: 4 }}>
+                      {form.modules.length} módulo{form.modules.length !== 1 ? "s" : ""} vinculado{form.modules.length !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+
+                  {modulesError && (
+                    <div className="flex items-start gap-2 rounded-xl px-3 py-2" style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.18)" }}>
+                      <AlertCircle size={14} style={{ color: "#EF4444", marginTop: 1 }} />
+                      <p style={{ fontSize: 12, color: colors.textSecondary }}>{modulesError}</p>
+                    </div>
+                  )}
+
+                  {modulesLoading ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <div key={index} className="rounded-xl p-3" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+                          <LoadingBlock width="48%" />
+                          <div className="mt-2"><LoadingBlock width="80%" height={10} /></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {globalModules.map(module => {
+                        const checked = form.modules.includes(module.id);
+
+                        return (
+                          <button
+                            key={module.id}
+                            type="button"
+                            onClick={() => toggleModule(module.id)}
+                            className="rounded-xl p-3 text-left transition-all"
+                            style={{
+                              background: checked ? "rgba(99,102,241,0.08)" : colors.surface,
+                              border: `1px solid ${checked ? "rgba(99,102,241,0.35)" : colors.border}`,
+                            }}
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 30, height: 30, background: checked ? PRIMARY_SOFT_BG : colors.inputBg, color: checked ? PRIMARY_COLOR : colors.textMuted }}>
+                                {checked ? <CheckCircle2 size={15} /> : <Package size={15} />}
+                              </div>
+                              <div className="min-w-0">
+                                <p style={{ color: colors.textPrimary, fontSize: 13, fontWeight: 700 }}>{module.name}</p>
+                                <p style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{module.slug}</p>
+                                <p style={{ color: colors.textMuted, fontSize: 12, marginTop: 6, lineHeight: 1.4 }}>
+                                  {module.description || "Sem descrição cadastrada."}
+                                </p>
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* ── Tab Recursos ── */}
               {tab === "recursos" && (
                 <div className="space-y-4">
@@ -555,7 +661,7 @@ function PlanFormModal({ plan, onClose, onSave }: { plan?: Plan | null; onClose:
             {/* Footer */}
             <div className="flex items-center justify-between px-6 py-4 shrink-0" style={{ borderTop: `1px solid ${colors.border}` }}>
               <div className="flex gap-1">
-                {["geral","recursos","limites"].map((t, i) => (
+                {["geral","modulos","recursos","limites"].map((t, i) => (
                   <div key={t} className="rounded-full transition-all" style={{ width: tab === t ? "18px" : "6px", height: "6px", background: tab === t ? PRIMARY_COLOR : colors.border }} />
                 ))}
               </div>
@@ -649,6 +755,30 @@ function PlanDetailModal({ plan, onClose, onEdit }: { plan: Plan; onClose: () =>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Módulos */}
+          <div>
+            <p style={{ fontSize: "11px", color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "10px", fontFamily: "'Inter',sans-serif" }}>Módulos vinculados</p>
+            {plan.modules.length ? (
+              <div className="grid grid-cols-2 gap-3">
+                {plan.modules.map(module => (
+                  <div key={module.id} className="rounded-xl p-3 flex items-start gap-2.5" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <div className="rounded-lg flex items-center justify-center shrink-0" style={{ width: 28, height: 28, background: plan.color + "18", color: plan.color }}>
+                      <Package size={13} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate" style={{ color: colors.textPrimary, fontSize: 12, fontWeight: 700 }}>{module.name}</p>
+                      <p className="truncate" style={{ color: colors.textMuted, fontSize: 10, marginTop: 1 }}>{module.slug}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl p-4" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+                <p style={{ color: colors.textMuted, fontSize: 12 }}>Nenhum módulo vinculado a este plano.</p>
+              </div>
+            )}
+          </div>
+
           {/* Limites */}
           <div>
             <p style={{ fontSize: "11px", color: colors.textMuted, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: "10px", fontFamily: "'Inter',sans-serif" }}>Limites</p>

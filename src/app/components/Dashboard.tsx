@@ -54,6 +54,21 @@ function formatMonth(value: string) {
   return date ? date.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "") : value;
 }
 
+function formatDateTime(value?: string | null) {
+  if (!value) return "-";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 function CustomTooltip({ active, payload, label }: any) {
   const { colors } = useTheme();
   if (!active || !payload?.length) return null;
@@ -512,6 +527,8 @@ export function Dashboard() {
   const weeklyActivity = dashboard?.weekly_activity ?? [];
   const recentActivities = dashboard?.recent_activities ?? [];
   const topClients = dashboard?.top_clients ?? [];
+  const saas = dashboard?.saas;
+  const planTotal = saas?.companies_by_plan.reduce((total, item) => total + item.total, 0) ?? 0;
   const kpis = useMemo(() => [
     { label: "Receita Total", value: formatCurrency(Number(kpiData?.receita_total ?? 0)), change: "Atual", positive: true, icon: DollarSign, colorKey: "blue" as const, sub: "recebido" },
     { label: "Usuários", value: formatNumber(Number(kpiData?.usuarios_total ?? 0)), change: "Total", positive: true, icon: Users, colorKey: "teal" as const, sub: "cadastrados" },
@@ -572,6 +589,38 @@ export function Dashboard() {
           {error}
         </div>
       )}
+
+      {/* SaaS KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        {loading ? (
+          Array.from({ length: 4 }).map((_, index) => (
+            <div key={index} className="rounded-2xl p-5" style={cardStyle}>
+              <div className="rounded-xl mb-3" style={{ width: 38, height: 38, background: colors.hoverBg }} />
+              <div className="rounded-full mb-3" style={{ width: 72, height: 24, background: colors.hoverBg }} />
+              <div className="rounded-full mb-2" style={{ width: 124, height: 13, background: colors.hoverBg }} />
+              <div className="rounded-full" style={{ width: 92, height: 11, background: colors.hoverBg }} />
+            </div>
+          ))
+        ) : ([
+          { label: "Total de Empresas", value: formatNumber(saas?.kpis.total_companies ?? 0), icon: Building2, color: "#6366F1", sub: "cadastradas" },
+          { label: "Empresas Ativas", value: formatNumber(saas?.kpis.active_companies ?? 0), icon: CheckCircle2, color: colors.green, sub: "operando" },
+          { label: "Em Onboarding", value: formatNumber(saas?.kpis.onboarding_companies ?? 0), icon: Clock, color: colors.yellow, sub: "pendentes ou em progresso" },
+          { label: "Tenants com Erro", value: formatNumber(saas?.kpis.tenants_with_error ?? 0), icon: AlertCircle, color: colors.red, sub: "exigem atenção" },
+        ]).map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <div key={item.label} className="rounded-2xl p-5" style={cardStyle}>
+              <div className="rounded-xl flex items-center justify-center mb-3" style={{ width: 38, height: 38, background: `${item.color}18` }}>
+                <Icon size={17} style={{ color: item.color }} />
+              </div>
+              <p style={{ fontSize: 26, color: colors.textPrimary, fontWeight: 700, lineHeight: 1 }}>{item.value}</p>
+              <p style={{ fontSize: 13, color: colors.textSecondary, marginTop: 6 }}>{item.label}</p>
+              <p style={{ fontSize: 11, color: colors.textMuted, marginTop: 2 }}>{item.sub}</p>
+            </div>
+          );
+        })}
+      </div>
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -919,6 +968,129 @@ export function Dashboard() {
         </ResponsiveContainer>
         )}
       </div>
+
+      {/* SaaS dashboard */}
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+          <div className="rounded-2xl p-6" style={cardStyle}>
+            <div className="flex items-start justify-between gap-3 mb-5">
+              <div>
+                <h3 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "17px" }}>
+                  Módulos Mais Utilizados
+                </h3>
+                <p style={{ fontSize: "11px", color: colors.textMuted, marginTop: 2 }}>
+                  Estimado por módulos padrão e planos contratados
+                </p>
+              </div>
+              <Filter size={16} style={{ color: colors.textMuted }} />
+            </div>
+            <div className="space-y-3">
+              {(saas?.most_used_modules ?? []).map((module) => {
+                const max = Math.max(...(saas?.most_used_modules.map((item) => item.total) ?? [1]), 1);
+                const width = Math.max(8, Math.round(module.total / max * 100));
+
+                return (
+                  <div key={module.slug ?? module.name}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span style={{ fontSize: 13, color: colors.textPrimary, fontWeight: 500 }}>{module.name}</span>
+                      <span style={{ fontSize: 12, color: colors.textMuted }}>{module.total}</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: colors.surface }}>
+                      <div className="h-full rounded-full" style={{ width: `${width}%`, background: "#6366F1" }} />
+                    </div>
+                  </div>
+                );
+              })}
+              {!loading && !saas?.most_used_modules.length && (
+                <p style={{ fontSize: 13, color: colors.textMuted }}>Nenhum módulo disponível para cálculo.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-6 xl:row-span-2" style={cardStyle}>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "17px", marginBottom: "16px" }}>
+              Últimos Logins
+            </h3>
+            <div className="space-y-3">
+              {(saas?.latest_logins ?? []).map((login) => (
+                <div key={`${login.email}-${login.last_login_at}`} className="flex items-center gap-3">
+                  <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: 34, height: 34, background: colors.surface, border: `1px solid ${colors.border}` }}>
+                    <Users size={15} style={{ color: colors.textMuted }} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p style={{ fontSize: 13, color: colors.textPrimary, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{login.user}</p>
+                    <p style={{ fontSize: 11, color: colors.textMuted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{login.company ?? login.email}</p>
+                  </div>
+                  <span style={{ fontSize: 11, color: colors.textMuted, whiteSpace: "nowrap" }}>{formatDateTime(login.last_login_at)}</span>
+                </div>
+              ))}
+              {!loading && !saas?.latest_logins.length && (
+                <p style={{ fontSize: 13, color: colors.textMuted }}>Nenhum login registrado ainda.</p>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-2xl p-6" style={cardStyle}>
+            <h3 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "17px", marginBottom: "16px" }}>
+              Empresas por Plano
+            </h3>
+            <div className="space-y-3">
+              {(saas?.companies_by_plan ?? []).map((plan) => {
+                const width = planTotal > 0 ? Math.max(8, Math.round(plan.total / planTotal * 100)) : 0;
+                const color = plan.plan === "Enterprise" ? "#6366F1" : plan.plan === "Pro" ? colors.teal : colors.textMuted;
+
+                return (
+                  <div key={plan.plan}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span style={{ fontSize: 13, color: colors.textPrimary, fontWeight: 500 }}>{plan.plan}</span>
+                      <span style={{ fontSize: 12, color: colors.textMuted }}>{plan.total}</span>
+                    </div>
+                    <div className="h-2 rounded-full overflow-hidden" style={{ background: colors.surface }}>
+                      <div className="h-full rounded-full" style={{ width: `${width}%`, background: color }} />
+                    </div>
+                  </div>
+                );
+              })}
+              {!loading && !saas?.companies_by_plan.length && (
+                <p style={{ fontSize: 13, color: colors.textMuted }}>Nenhuma empresa vinculada a planos.</p>
+              )}
+            </div>
+          </div>
+          <div className="rounded-2xl p-6 xl:col-span-2" style={cardStyle}>
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h3 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "17px" }}>
+                Alertas Técnicos
+              </h3>
+              <p style={{ fontSize: "12px", color: colors.textMuted, marginTop: 2 }}>
+                Tenants sem schema ou com erro de onboarding
+              </p>
+            </div>
+            <span className="rounded-full px-2 py-1" style={{ fontSize: "11px", color: (saas?.technical_alerts.length ?? 0) > 0 ? colors.yellow : colors.green, background: (saas?.technical_alerts.length ?? 0) > 0 ? `${colors.yellow}18` : `${colors.green}18` }}>
+              {saas?.technical_alerts.length ?? 0} alerta{(saas?.technical_alerts.length ?? 0) !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="space-y-2">
+            {(saas?.technical_alerts ?? []).map((alert) => (
+              <div key={`${alert.company}-${alert.type}`} className="flex items-start gap-3 rounded-xl px-4 py-3" style={{ background: colors.surface, border: `1px solid ${colors.border}` }}>
+                <AlertCircle size={16} className="shrink-0 mt-0.5" style={{ color: alert.severity === "danger" ? colors.red : colors.yellow }} />
+                <div className="min-w-0">
+                  <p style={{ fontSize: 13, color: colors.textPrimary, fontWeight: 600 }}>{alert.company}</p>
+                  <p style={{ fontSize: 12, color: colors.textMuted, marginTop: 2 }}>{alert.message}</p>
+                </div>
+              </div>
+            ))}
+            {!loading && !saas?.technical_alerts.length && (
+              <div className="flex items-center gap-3 rounded-xl px-4 py-3" style={{ background: `${colors.green}10`, border: `1px solid ${colors.green}30` }}>
+                <CheckCircle2 size={16} style={{ color: colors.green }} />
+                <p style={{ fontSize: 13, color: colors.textSecondary }}>Nenhum alerta técnico encontrado.</p>
+              </div>
+            )}
+          </div>
+        </div>
+        </div>
+      </div>
+
       {showAtividades && <AtividadesDrawer onClose={() => setShowAtividades(false)} initialActivities={recentActivities} />}
       {showTopClientes && <TopClientesDrawer onClose={() => setShowTopClientes(false)} initialClients={topClients} />}
     </div>

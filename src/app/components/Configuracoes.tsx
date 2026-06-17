@@ -673,6 +673,153 @@ function Aparencia() {
   );
 }
 
+function DataMetric({ label, value, sub, icon: Icon, color }: { label: string; value: string; sub: string; icon: any; color: string }) {
+  const { colors, theme } = useTheme();
+
+  return (
+    <div
+      className="rounded-2xl p-4 flex items-start gap-3"
+      style={{
+        background: colors.card,
+        border: `1px solid ${colors.border}`,
+        boxShadow: theme === "light" ? "0 2px 12px rgba(0,0,0,0.05)" : "0 4px 20px rgba(0,0,0,0.15)",
+      }}
+    >
+      <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: 38, height: 38, background: `${color}18`, color }}>
+        <Icon size={17} />
+      </div>
+      <div className="min-w-0">
+        <p style={{ color: colors.textPrimary, fontSize: 22, fontWeight: 800, fontFamily: "'Inter',sans-serif" }}>{value}</p>
+        <p style={{ color: colors.textSecondary, fontSize: 12, fontWeight: 600, fontFamily: "'Inter',sans-serif", marginTop: 1 }}>{label}</p>
+        <p style={{ color: colors.textMuted, fontSize: 11, fontFamily: "'Inter',sans-serif", marginTop: 3 }}>{sub}</p>
+      </div>
+    </div>
+  );
+}
+
+function DadosBackup() {
+  const { colors, theme } = useTheme();
+  const [state, setState] = useState({
+    autoBackup: true,
+    encrypted: true,
+    notifyFailure: true,
+    includeAttachments: false,
+  });
+  const set = (key: keyof typeof state) => (value: boolean) => setState(current => ({ ...current, [key]: value }));
+  const cardStyle = {
+    background: colors.card,
+    border: `1px solid ${colors.border}`,
+    boxShadow: theme === "light" ? "0 2px 12px rgba(0,0,0,0.05)" : "0 4px 20px rgba(0,0,0,0.15)",
+  };
+  const backups = [
+    { name: "backup-2026-06-16-0300.zip", size: "4.8 GB", type: "Completo", status: "Concluído", color: "#10B981" },
+    { name: "backup-2026-06-15-0300.zip", size: "4.7 GB", type: "Completo", status: "Concluído", color: "#10B981" },
+    { name: "backup-2026-06-14-0300.zip", size: "4.6 GB", type: "Incremental", status: "Concluído", color: "#3B82F6" },
+    { name: "backup-2026-06-13-0300.zip", size: "4.6 GB", type: "Incremental", status: "Verificando", color: "#F59E0B" },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h2 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "20px", fontWeight: 600 }}>
+            Dados & Backup
+          </h2>
+          <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter',sans-serif", marginTop: "3px" }}>
+            Gerencie retenção, exportação e rotinas de backup da plataforma
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <button className="rounded-xl px-4 py-2 flex items-center gap-2 transition-all" style={{ color: colors.textSecondary, background: colors.surface, border: `1px solid ${colors.border}`, fontSize: 13, fontWeight: 600 }}>
+            <Upload size={14} /> Restaurar
+          </button>
+          <DefaultButton>
+            <Download size={14} /> Exportar dados
+          </DefaultButton>
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-4">
+        <DataMetric icon={Database} label="Dados armazenados" value="4.8 GB" sub="82% em registros operacionais" color="#6366F1" />
+        <DataMetric icon={RefreshCw} label="Último backup" value="03:00" sub="Hoje, 16/06/2026" color="#10B981" />
+        <DataMetric icon={Download} label="Retenção" value="90 dias" sub="12 snapshots disponíveis" color="#F59E0B" />
+        <DataMetric icon={Shield} label="Criptografia" value="AES-256" sub="Chaves rotacionadas mensalmente" color="#14B8A6" />
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[1.1fr_0.9fr]">
+        <SectionCard title="Política de backup">
+          <ToggleRow label="Backup automático diário" description="Executar backup completo todos os dias às 03:00" value={state.autoBackup} onChange={set("autoBackup")} />
+          <ToggleRow label="Criptografar arquivos" description="Aplicar criptografia antes de enviar para o armazenamento externo" value={state.encrypted} onChange={set("encrypted")} />
+          <ToggleRow label="Notificar falhas" description="Enviar alerta para administradores quando uma rotina falhar" value={state.notifyFailure} onChange={set("notifyFailure")} />
+          <ToggleRow label="Incluir anexos" description="Adicionar documentos e arquivos enviados pelos usuários ao pacote" value={state.includeAttachments} onChange={set("includeAttachments")} />
+        </SectionCard>
+
+        <div className="rounded-2xl overflow-hidden" style={cardStyle}>
+          <div className="px-6 py-4" style={{ borderBottom: `1px solid ${colors.border}`, background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)" }}>
+            <h3 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "15px", fontWeight: 600 }}>Armazenamento</h3>
+          </div>
+          <div className="p-6 space-y-5">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span style={{ color: colors.textSecondary, fontSize: 12, fontWeight: 600 }}>Uso do bucket principal</span>
+                <span style={{ color: colors.textPrimary, fontSize: 12, fontWeight: 700 }}>64%</span>
+              </div>
+              <div className="h-2 rounded-full overflow-hidden" style={{ background: colors.inputBg }}>
+                <div className="h-full rounded-full" style={{ width: "64%", background: "linear-gradient(90deg, #6366F1, #14B8A6)" }} />
+              </div>
+            </div>
+
+            {[
+              ["Banco principal", "2.9 GB", "#6366F1"],
+              ["Schemas tenants", "1.4 GB", "#14B8A6"],
+              ["Logs e auditoria", "380 MB", "#F59E0B"],
+              ["Arquivos temporários", "120 MB", "#94A3B8"],
+            ].map(([label, value, color]) => (
+              <div key={label} className="flex items-center justify-between rounded-xl px-3 py-2.5" style={{ background: colors.inputBg, border: `1px solid ${colors.border}` }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="rounded-full" style={{ width: 8, height: 8, background: color }} />
+                  <span style={{ color: colors.textSecondary, fontSize: 12, fontWeight: 600 }}>{label}</span>
+                </div>
+                <span style={{ color: colors.textPrimary, fontSize: 12, fontWeight: 700 }}>{value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl overflow-hidden" style={cardStyle}>
+        <div className="px-6 py-4 flex items-center justify-between" style={{ borderBottom: `1px solid ${colors.border}`, background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)" }}>
+          <h3 style={{ fontFamily: "'Playfair Display',serif", color: colors.textPrimary, fontSize: "15px", fontWeight: 600 }}>Histórico recente</h3>
+          <button className="rounded-xl px-3 py-1.5 flex items-center gap-2" style={{ color: colors.textMuted, background: colors.inputBg, border: `1px solid ${colors.border}`, fontSize: 12, fontWeight: 600 }}>
+            <RefreshCw size={13} /> Atualizar
+          </button>
+        </div>
+        <div>
+          {backups.map((backup, index) => (
+            <div key={backup.name} className="grid items-center gap-4 px-6 py-4" style={{ gridTemplateColumns: "1.4fr 0.6fr 0.6fr 0.7fr 0.3fr", borderBottom: index < backups.length - 1 ? `1px solid ${colors.border}` : "none" }}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="rounded-xl flex items-center justify-center shrink-0" style={{ width: 34, height: 34, background: `${backup.color}18`, color: backup.color }}>
+                  <Database size={15} />
+                </div>
+                <div className="min-w-0">
+                  <p className="truncate" style={{ color: colors.textPrimary, fontSize: 13, fontWeight: 700 }}>{backup.name}</p>
+                  <p style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>Retenção expira em 89 dias</p>
+                </div>
+              </div>
+              <span style={{ color: colors.textSecondary, fontSize: 12, fontWeight: 600 }}>{backup.size}</span>
+              <span style={{ color: colors.textMuted, fontSize: 12 }}>{backup.type}</span>
+              <span className="rounded-full px-2.5 py-1 justify-self-start" style={{ color: backup.color, background: `${backup.color}18`, fontSize: 11, fontWeight: 700 }}>{backup.status}</span>
+              <button className="rounded-lg p-1.5 justify-self-end" style={{ color: colors.textMuted }}>
+                <Download size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const perfilColors = ["#3B82F6", "#14B8A6", "#8B5CF6", "#F59E0B", "#10B981", "#EF4444", "#EC4899", "#94A3B8"];
 const DEFAULT_BUTTON_GRADIENT = "linear-gradient(135deg, #6366F1, #4338CA)";
 const perfilActions: { key: PermissionAction; label: string; color: string }[] = [
@@ -1205,7 +1352,7 @@ function LoadingBlock({ width = "100%", height = 12, className = "" }: { width?:
   return <div className={`rounded-full animate-pulse ${className}`} style={{ width, height, background: colors.hoverBg }} />;
 }
 
-function Modulos() {
+export function Modulos() {
   const { colors, theme, modules, setModuleEnabled, syncModulesFromApi } = useTheme();
   const [apiModules, setApiModules] = useState<ApiModule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1514,6 +1661,7 @@ export function Configuracoes() {
       case "seguranca":     return <Seguranca />;
       case "integracoes":   return <Integracoes />;
       case "aparencia":     return <Aparencia />;
+      case "dados":         return <DadosBackup />;
       default:              return <PlaHolderSection id={active} />;
     }
   };

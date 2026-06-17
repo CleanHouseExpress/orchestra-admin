@@ -1,4 +1,5 @@
 import { apiRequest } from "./apiClient";
+import { ApiCompanyModule } from "./companyModulesApi";
 import { PaginatedResponse } from "./companiesApi";
 
 export type ApiBillingCycle = "mensal" | "anual" | "customizado";
@@ -24,6 +25,7 @@ export interface ApiPlan {
   badge?: string | null;
   companies_count?: number;
   users_count?: number;
+  modules?: ApiCompanyModule[];
   features?: ApiPlanFeature[] | null;
   limits?: {
     usuarios?: string;
@@ -56,6 +58,7 @@ export interface PlanPayload {
     suporte: string;
   };
   revenue?: string;
+  modules?: number[];
 }
 
 function toApiPayload(payload: PlanPayload) {
@@ -73,6 +76,7 @@ function toApiPayload(payload: PlanPayload) {
     features: payload.features,
     limits: payload.limits,
     revenue: payload.revenue ?? null,
+    modules: payload.modules ?? [],
   };
 }
 

@@ -32,7 +32,6 @@ const planConfig = {
   Pro: { color: "#8B5CF6", bg: "rgba(139,92,246,0.12)" },
   Basic: { color: "#94A3B8", bg: "rgba(148,163,184,0.12)" },
 };
-
 function DetailModal({ company, onClose, onDetail, onEdit }: { company: CompanyView; onClose: () => void; onDetail: () => void; onEdit: () => void }) {
   const { colors, theme } = useTheme();
   const st = statusConfig[company.status as keyof typeof statusConfig];
@@ -45,110 +44,125 @@ function DetailModal({ company, onClose, onDetail, onEdit }: { company: CompanyV
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[580px] rounded-2xl overflow-hidden"
+        className="w-full max-w-[1040px] rounded-2xl overflow-hidden"
         style={{ background: colors.card, border: `1px solid ${colors.borderStrong}`, boxShadow: "0 32px 80px rgba(0,0,0,0.35)" }}
         onClick={e => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-start justify-between p-6" style={{ borderBottom: `1px solid ${colors.border}` }}>
-          <div className="flex items-center gap-4">
-            <div
-              className="rounded-2xl flex items-center justify-center shrink-0"
-              style={{ width: "52px", height: "52px", background: `hsl(${company.id * 37 + 200}, 60%, ${theme === "light" ? "42%" : "28%"})`, fontSize: "20px", color: "#fff", fontWeight: 700 }}
-            >
-              {company.name.charAt(0)}
-            </div>
+        <div className="flex items-stretch min-h-[260px]">
+          {/* Summary */}
+          <div
+            className="w-[300px] shrink-0 p-6 flex flex-col justify-between"
+            style={{ borderRight: `1px solid ${colors.border}`, background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)" }}
+          >
             <div>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "20px", fontWeight: 600 }}>{company.name}</h2>
-              <p style={{ fontSize: "13px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", marginTop: "2px" }}>{company.cnpj}</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="rounded-xl p-2 transition-colors" style={{ color: colors.textMuted, background: colors.surface }}
-            onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
-            onMouseLeave={e => (e.currentTarget.style.background = colors.surface)}
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-0" style={{ borderBottom: `1px solid ${colors.border}` }}>
-          {[
-            { label: "Receita", value: company.revenue, icon: DollarSign },
-            { label: "Clientes", value: company.clients, icon: Users },
-            { label: "Contratos", value: company.contracts, icon: FileText },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className="flex flex-col items-center py-5 gap-1"
-              style={{ borderRight: i < 2 ? `1px solid ${colors.border}` : "none" }}
-            >
-              <s.icon size={15} style={{ color: colors.textMuted }} />
-              <p style={{ fontSize: "18px", fontFamily: "'Inter', sans-serif", color: colors.textPrimary, fontWeight: 600 }}>{s.value}</p>
-              <p style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter', sans-serif" }}>{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* Info */}
-        <div className="p-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            {[
-              { label: "Segmento", value: company.segment },
-              { label: "Cliente desde", value: company.since },
-              { label: "Cidade", value: `${company.city}, ${company.state}`, icon: MapPin },
-              { label: "Telefone", value: company.phone, icon: Phone },
-              { label: "E-mail", value: company.email, icon: Mail },
-              { label: "Site", value: company.site, icon: Globe },
-            ].map((info) => (
-              <div key={info.label}>
-                <p style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "3px" }}>
-                  {info.label}
-                </p>
-                <p style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter', sans-serif" }}>{info.value}</p>
+              <div className="flex items-start justify-between gap-4 mb-5">
+                <div
+                  className="rounded-2xl flex items-center justify-center shrink-0"
+                  style={{ width: "56px", height: "56px", background: `hsl(${company.id * 37 + 200}, 60%, ${theme === "light" ? "42%" : "28%"})`, fontSize: "22px", color: "#fff", fontWeight: 700 }}
+                >
+                  {company.name.charAt(0)}
+                </div>
+                <button onClick={onClose} className="rounded-xl p-2 transition-colors" style={{ color: colors.textMuted, background: colors.card }}
+                  onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
+                  onMouseLeave={e => (e.currentTarget.style.background = colors.card)}
+                >
+                  <X size={16} />
+                </button>
               </div>
-            ))}
+              <h2 style={{ fontFamily: "'Playfair Display', serif", color: colors.textPrimary, fontSize: "21px", fontWeight: 600, lineHeight: 1.18 }}>{company.name}</h2>
+              <p style={{ fontSize: "12px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", marginTop: "6px" }}>{company.cnpj}</p>
+              <div className="flex flex-wrap items-center gap-2 mt-5">
+                <span
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1"
+                  style={{ fontSize: "12px", color: st.color, background: st.bg, fontWeight: 500, fontFamily: "'Inter', sans-serif" }}
+                >
+                  <st.icon size={12} /> {st.label}
+                </span>
+                <span
+                  className="rounded-full px-3 py-1"
+                  style={{ fontSize: "12px", color: pl.color, background: pl.bg, fontWeight: 500, fontFamily: "'Inter', sans-serif" }}
+                >
+                  {company.plan}
+                </span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2 mt-6">
+              {[
+                { label: "Receita", value: company.revenue, icon: DollarSign },
+                { label: "Clientes", value: company.clients, icon: Users },
+                { label: "Contratos", value: company.contracts, icon: FileText },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  className="rounded-xl p-3"
+                  style={{ background: colors.card, border: `1px solid ${colors.border}` }}
+                >
+                  <s.icon size={13} style={{ color: colors.textMuted, marginBottom: "8px" }} />
+                  <p style={{ fontSize: "15px", fontFamily: "'Inter', sans-serif", color: colors.textPrimary, fontWeight: 600, lineHeight: 1, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.value}</p>
+                  <p style={{ fontSize: "10px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", marginTop: "5px" }}>{s.label}</p>
+                </div>
+              ))}
+            </div>
           </div>
 
-          <div className="flex items-center gap-3 pt-2">
-            <span
-              className="flex items-center gap-1.5 rounded-full px-3 py-1"
-              style={{ fontSize: "12px", color: st.color, background: st.bg, fontWeight: 500, fontFamily: "'Inter', sans-serif" }}
-            >
-              <st.icon size={12} /> {st.label}
-            </span>
-            <span
-              className="rounded-full px-3 py-1"
-              style={{ fontSize: "12px", color: pl.color, background: pl.bg, fontWeight: 500, fontFamily: "'Inter', sans-serif" }}
-            >
-              {company.plan}
-            </span>
-            <span
-              className="flex items-center gap-1 rounded-full px-3 py-1"
-              style={{ fontSize: "12px", color: company.growth >= 0 ? "#10B981" : "#EF4444", background: company.growth >= 0 ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", fontFamily: "'Inter', sans-serif" }}
-            >
-              {company.growth >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-              {company.growth > 0 ? "+" : ""}{company.growth}% crescimento
-            </span>
-          </div>
-        </div>
+          <div className="flex-1 flex flex-col min-w-0">
+            {/* Info */}
+            <div className="p-6 flex-1">
+              <div className="grid grid-cols-3 gap-x-6 gap-y-4">
+                {[
+                  { label: "Segmento", value: company.segment },
+                  { label: "Subdomínio", value: company.subdomain },
+                  { label: "Schema", value: company.schema },
+                  { label: "Status do tenant", value: company.tenantStatus },
+                  { label: "Onboarding", value: company.onboardingStatus },
+                  { label: "Último acesso", value: company.lastAccess },
+                  { label: "Administrador", value: company.primaryAdmin ? `${company.primaryAdmin.name} (${company.primaryAdmin.email})` : "-" },
+                  { label: "Módulos", value: company.modules.length ? company.modules.join(", ") : "-" },
+                  { label: "Cliente desde", value: company.since },
+                  { label: "Cidade", value: `${company.city}, ${company.state}`, icon: MapPin },
+                  { label: "Telefone", value: company.phone, icon: Phone },
+                  { label: "E-mail", value: company.email, icon: Mail },
+                  { label: "Site", value: company.site, icon: Globe },
+                ].map((info) => (
+                  <div key={info.label} className={info.label === "Administrador" || info.label === "Módulos" ? "col-span-2 min-w-0" : "min-w-0"}>
+                    <p style={{ fontSize: "10px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: "3px" }}>
+                      {info.label}
+                    </p>
+                    <p style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter', sans-serif", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{info.value}</p>
+                  </div>
+                ))}
+              </div>
 
-        {/* Actions */}
-        <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${colors.border}` }}>
-          <button
-            onClick={onEdit}
-            className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all"
-            style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter', sans-serif", background: colors.surface, border: `1px solid ${colors.border}` }}
-            onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
-            onMouseLeave={e => (e.currentTarget.style.background = colors.surface)}
-          >
-            <Pencil size={14} /> Editar
-          </button>
-          <DefaultButton
-            onClick={onDetail}
-          >
-            Ver detalhes completos <ArrowUpRight size={14} />
-          </DefaultButton>
+              <div className="flex items-center gap-3 mt-5">
+                <span
+                  className="flex items-center gap-1 rounded-full px-3 py-1"
+                  style={{ fontSize: "12px", color: company.growth >= 0 ? "#10B981" : "#EF4444", background: company.growth >= 0 ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", fontFamily: "'Inter', sans-serif" }}
+                >
+                  {company.growth >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                  {company.growth > 0 ? "+" : ""}{company.growth}% crescimento
+                </span>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 px-6 py-4" style={{ borderTop: `1px solid ${colors.border}` }}>
+              <button
+                onClick={onEdit}
+                className="flex items-center gap-2 rounded-xl px-4 py-2 transition-all"
+                style={{ fontSize: "13px", color: colors.textSecondary, fontFamily: "'Inter', sans-serif", background: colors.surface, border: `1px solid ${colors.border}` }}
+                onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
+                onMouseLeave={e => (e.currentTarget.style.background = colors.surface)}
+              >
+                <Pencil size={14} /> Editar
+              </button>
+              <DefaultButton
+                onClick={onDetail}
+              >
+                Ver detalhes completos <ArrowUpRight size={14} />
+              </DefaultButton>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -381,7 +395,7 @@ export function Empresas() {
             background: theme === "light" ? colors.surface : "rgba(255,255,255,0.02)",
           }}
         >
-          {["Empresa", "Segmento", "Plano", "Status", "Receita", "Crescimento", ""].map((h) => (
+          {["Empresa", "Segmento", "Plano", "Status", "Onboarding", "Crescimento", ""].map((h) => (
             <span key={h} style={{ fontSize: "11px", color: colors.textMuted, fontFamily: "'Inter', sans-serif", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               {h}
             </span>
@@ -441,7 +455,7 @@ export function Empresas() {
                 }}
                 onMouseEnter={e => (e.currentTarget.style.background = colors.hoverBg)}
                 onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-                onClick={() => navigate(`/empresas/${company.id}`)}
+                onClick={() => setSelected(company.id)}
               >
                 {/* Name */}
                 <div className="flex items-center gap-3 min-w-0">
@@ -478,8 +492,13 @@ export function Empresas() {
                   <st.icon size={11} /> {st.label}
                 </span>
 
-                {/* Revenue */}
-                <span style={{ fontSize: "13px", color: colors.textPrimary, fontFamily: "'Inter', sans-serif", fontWeight: 500 }}>{company.revenue}</span>
+                {/* Onboarding */}
+                <span
+                  className="rounded-full px-2.5 py-1 inline-flex w-fit"
+                  style={{ fontSize: "12px", color: "#94A3B8", background: "rgba(148,163,184,0.12)", fontFamily: "'Inter', sans-serif", fontWeight: 500 }}
+                >
+                  {company.onboardingStatus}
+                </span>
 
                 {/* Growth */}
                 <span
@@ -495,7 +514,7 @@ export function Empresas() {
                   <button
                     className="rounded-lg p-1.5 transition-all opacity-0 group-hover:opacity-100"
                     style={{ color: colors.textMuted, background: colors.surface }}
-                    onClick={e => { e.stopPropagation(); setSelected(company.id); }}
+                    onClick={e => { e.stopPropagation(); navigate(`/empresas/${company.id}`); }}
                     onMouseEnter={e => (e.currentTarget.style.color = "#6366F1")}
                     onMouseLeave={e => (e.currentTarget.style.color = colors.textMuted)}
                   >

@@ -7,6 +7,18 @@ export interface ApiCompany {
   name: string;
   document: string | null;
   cnpj?: string | null;
+  subdomain?: string | { subdomain?: string | null } | null;
+  subdomain_name?: string | null;
+  domain?: string | null;
+  domains?: string[] | null;
+  schema?: string | null;
+  schema_name?: string | null;
+  tenant_schema?: string | null;
+  tenant_status?: string | null;
+  onboarding_status?: string | null;
+  last_access?: string | null;
+  last_access_at?: string | null;
+  last_login_at?: string | null;
   description?: string | null;
   email: string | null;
   phone: string | null;
@@ -40,7 +52,7 @@ export interface ApiCompany {
   } | null;
   site: string | null;
   customer_since: string | null;
-  modules?: unknown[];
+  modules?: ApiCompanyModuleLink[];
   users?: Array<{
     id: number;
     company_id?: number | null;
@@ -53,6 +65,11 @@ export interface ApiCompany {
     created_at?: string | null;
     updated_at?: string | null;
   }>;
+  admin?: {
+    id?: number;
+    name?: string | null;
+    email?: string | null;
+  } | null;
 }
 
 export interface ApiCompanyUser {
@@ -66,6 +83,16 @@ export interface ApiCompanyUser {
   status?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
+}
+
+export interface ApiCompanyModuleLink {
+  id: number;
+  name?: string;
+  module?: string;
+  slug?: string;
+  key?: string;
+  description?: string | null;
+  is_active?: boolean;
 }
 
 export function isCompanyAdminUser(user: Pick<ApiCompanyUser, "role" | "role_id" | "role_title">) {

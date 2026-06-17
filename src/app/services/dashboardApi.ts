@@ -17,6 +17,39 @@ export interface DashboardKpis {
   contratos_ativos: number;
 }
 
+export interface DashboardSaasSummary {
+  kpis: {
+    total_companies: number;
+    active_companies: number;
+    onboarding_companies: number;
+    tenants_with_error: number;
+  };
+  most_used_modules: Array<{
+    name: string;
+    slug?: string | null;
+    total: number;
+  }>;
+  latest_logins: Array<{
+    user: string;
+    email: string;
+    company?: string | null;
+    last_login_at?: string | null;
+  }>;
+  companies_by_plan: Array<{
+    plan: string;
+    total: number;
+  }>;
+  technical_alerts: Array<{
+    company: string;
+    type: string;
+    severity: "warning" | "danger" | string;
+    message: string;
+  }>;
+  meta?: {
+    modules_source?: string;
+  };
+}
+
 export interface DashboardRevenuePoint {
   month: string;
   mes?: string;
@@ -76,6 +109,7 @@ export interface DashboardSummary {
   weekly_activity: DashboardWeeklyActivity[];
   recent_activities: DashboardRecentActivity[];
   top_clients: DashboardTopClient[];
+  saas?: DashboardSaasSummary;
 }
 
 export interface DashboardTopClientsResponse {

@@ -9,10 +9,12 @@ import { EmpresaEditar } from "./components/EmpresaEditar";
 import { CaixaEmail } from "./components/CaixaEmail";
 import { Usuarios } from "./components/Usuarios";
 import { Configuracoes } from "./components/Configuracoes";
+import { ModulosCatalogo } from "./components/ModulosCatalogo";
 import { Planos } from "./components/Planos";
 import { Contratos } from "./components/Contratos";
 import { Financeiro } from "./components/Financeiro";
 import { Relatorios } from "./components/Relatorios";
+import { Auditoria } from "./components/Auditoria";
 import { Login } from "./components/Login";
 import { Install } from "./components/Install";
 import { ThemeProvider, useTheme } from "./components/ThemeContext";
@@ -26,10 +28,12 @@ const pageLabels: Record<string, string> = {
   financial: "Financeiro",
   contracts: "Contratos",
   plans: "Planos",
+  modules: "Módulos",
   reports: "Relatórios",
   emails: "Caixa de E-mail",
   users: "Usuários",
   settings: "Configurações",
+  audit: "Auditoria",
 };
 
 const pageRoutes: Record<string, string> = {
@@ -38,10 +42,12 @@ const pageRoutes: Record<string, string> = {
   financial: "/financeiro",
   contracts: "/contratos",
   plans: "/planos",
+  modules: "/modulos",
   reports: "/relatorios",
   emails: "/emails",
   users: "/usuarios",
   settings: "/configuracoes",
+  audit: "/auditoria",
 };
 
 const pathPages: Record<string, string> = Object.fromEntries(
@@ -192,20 +198,18 @@ function InstallCheckError({ onRetry }: { onRetry: () => void }) {
 
 function LoginRoute({ authenticated }: { authenticated: boolean }) {
   const navigate = useNavigate();
-  const location = useLocation();
-  const from = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname ?? "/dashboard";
 
   if (authenticated) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  return <Login onLogin={() => navigate(from, { replace: true })} />;
+  return <Login onLogin={() => navigate("/dashboard", { replace: true })} />;
 }
 
 function AppShell({ authenticated }: { authenticated: boolean }) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { colors, modules, modulesLoaded } = useTheme();
+  const { colors, modules } = useTheme();
   const [routeLoading, setRouteLoading] = useState(false);
   const activePage = location.pathname.startsWith("/empresas")
     ? "companies"
@@ -215,6 +219,7 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
     modules.some((module) => module.id === page && module.enabled)
   );
   const currentModuleAllowed = Boolean(activeModule?.enabled);
+  const currentPageAllowed = activePage === "audit" || activePage === "modules" || currentModuleAllowed;
 
   useEffect(() => {
     setRouteLoading(true);
@@ -224,14 +229,14 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
   }, [location.pathname]);
 
   useEffect(() => {
-    if (!authenticated || !modulesLoaded || currentModuleAllowed) return;
+    if (!authenticated || currentPageAllowed) return;
 
     const fallbackPath = firstEnabledPage ? pageRoutes[firstEnabledPage] : null;
 
     if (fallbackPath && fallbackPath !== location.pathname) {
       startTransition(() => navigate(fallbackPath, { replace: true }));
     }
-  }, [authenticated, currentModuleAllowed, firstEnabledPage, location.pathname, modulesLoaded, navigate]);
+  }, [authenticated, currentPageAllowed, firstEnabledPage, location.pathname, navigate]);
 
   if (!authenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
@@ -256,9 +261,7 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
         <Navbar />
         <main className="relative flex-1 overflow-hidden flex flex-col" style={{ background: colors.bg }}>
           <RouteProgress active={routeLoading} />
-          {!modulesLoaded ? (
-            <AccessPlaceholder text="Carregando módulos..." />
-          ) : !currentModuleAllowed ? (
+          {!currentPageAllowed ? (
             <AccessPlaceholder text={firstEnabledPage ? "Redirecionando..." : "Nenhum módulo disponível para este usuário."} />
           ) : (
             <Routes>
@@ -269,10 +272,12 @@ function AppShell({ authenticated }: { authenticated: boolean }) {
               <Route path="/financeiro" element={<Financeiro />} />
               <Route path="/contratos" element={<Contratos />} />
               <Route path="/planos" element={<Planos />} />
+              <Route path="/modulos" element={<ModulosCatalogo />} />
               <Route path="/relatorios" element={<Relatorios />} />
               <Route path="/emails" element={<CaixaEmail />} />
               <Route path="/usuarios" element={<Usuarios />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
+              <Route path="/auditoria" element={<Auditoria />} />
               <Route path="*" element={<Navigate to={firstEnabledPage ? pageRoutes[firstEnabledPage] : "/dashboard"} replace />} />
             </Routes>
           )}

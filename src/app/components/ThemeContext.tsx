@@ -133,11 +133,68 @@ function getInitialModules() {
     const parsed = JSON.parse(stored) as Array<Partial<ModuleConfig> & { id: string }>;
     return defaultModules.map((module) => {
       const storedModule = parsed.find((item) => item.id === module.id);
-      return storedModule ? { ...module, enabled: module.locked ? true : storedModule.enabled ?? module.enabled } : module;
+      return storedModule ? {
+        ...module,
+        apiId: storedModule.apiId ?? module.apiId,
+        label: storedModule.label ?? module.label,
+        description: storedModule.description ?? module.description,
+        enabled: module.locked ? true : storedModule.enabled ?? module.enabled,
+      } : module;
     });
   } catch {
     return defaultModules;
   }
+}
+
+function modulesSignature(modules: ModuleConfig[]) {
+  return JSON.stringify(
+    modules.map(({ id, apiId, label, description, enabled }) => ({
+      id,
+      apiId,
+      label,
+      description,
+      enabled,
+    })),
+  );
+}
+
+function saveModules(modules: ModuleConfig[]) {
+  window.localStorage.setItem(
+    MODULES_STORAGE_KEY,
+    JSON.stringify(
+      modules.map(({ id, apiId, apiSlug, label, description, icon, locked, enabled }) => ({
+        id,
+        apiId,
+        apiSlug,
+        label,
+        description,
+        icon,
+        locked,
+        enabled,
+      })),
+    ),
+  );
+}
+
+function mergeApiModules(current: ModuleConfig[], apiModules: ThemeApiModule[], options: SyncModulesOptions = {}) {
+  const { defaultEnabled = false, disableMissing = false, preserveLocked = true } = options;
+
+  return current.map((module) => {
+    const apiModule = apiModules.find((item) => (item.slug ?? item.key) === module.apiSlug);
+    if (!apiModule) {
+      return disableMissing ? { ...module, enabled: false } : module;
+    }
+
+    const hasAnyPermission = Boolean(apiModule.ver ?? apiModule.criar ?? apiModule.editar ?? apiModule.excluir);
+
+    return {
+      ...module,
+      apiId: apiModule.id,
+      description: apiModule.description ?? module.description,
+      label: apiModule.name ?? apiModule.module ?? module.label,
+      enabled: preserveLocked && module.locked ? true : apiModule.is_active ?? (hasAnyPermission || defaultEnabled),
+    };
+  });
 }
 
 interface ThemeCtx {
@@ -155,7 +212,7 @@ const ThemeContext = createContext<ThemeCtx>({
   colors: light,
   toggle: () => {},
   modules: defaultModules,
-  modulesLoaded: false,
+  modulesLoaded: true,
   setModuleEnabled: () => {},
   syncModulesFromApi: () => {},
 });
@@ -166,7 +223,19 @@ export function ThemeProvider({ children, authToken }: { children: ReactNode; au
     return stored === "dark" || stored === "light" ? stored : "light";
   });
   const [modules, setModules] = useState<ModuleConfig[]>(getInitialModules);
-  const [modulesLoaded, setModulesLoaded] = useState(false);
+  const [modulesLoaded, setModulesLoaded] = useState(true);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const nextColors = themes[theme];
+
+    root.classList.toggle('dark', theme === 'dark');
+    root.style.setProperty('--scrollbar-track', theme === 'dark' ? 'rgba(255,255,255,0.035)' : 'rgba(15,23,42,0.04)');
+    root.style.setProperty('--scrollbar-thumb', `linear-gradient(180deg, ${nextColors.teal}, ${nextColors.blue})`);
+    root.style.setProperty('--scrollbar-thumb-color', nextColors.teal);
+    root.style.setProperty('--scrollbar-thumb-hover', theme === 'dark' ? 'linear-gradient(180deg, #A78BFA, #818CF8)' : 'linear-gradient(180deg, #7C3AED, #4F46E5)');
+    root.style.setProperty('--scrollbar-border', theme === 'dark' ? nextColors.bgSecondary : nextColors.inputBg);
+  }, [theme]);
 
   const toggle = () => setTheme((current) => {
     const next = current === "dark" ? "light" : "dark";
@@ -177,55 +246,46 @@ export function ThemeProvider({ children, authToken }: { children: ReactNode; au
   const setModuleEnabled = useCallback((id: string, enabled: boolean) => {
     setModules((current) => {
       const next = current.map((module) => module.id === id && !module.locked ? { ...module, enabled } : module);
-      window.localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(next.map(({ id, enabled }) => ({ id, enabled }))));
+      saveModules(next);
       return next;
     });
   }, []);
 
   const syncModulesFromApi = useCallback((apiModules: ThemeApiModule[], options: SyncModulesOptions = {}) => {
-    const { defaultEnabled = false, disableMissing = false, preserveLocked = true } = options;
-
     setModules((current) => {
-      const next = current.map((module) => {
-        const apiModule = apiModules.find((item) => (item.slug ?? item.key) === module.apiSlug);
-        if (!apiModule) {
-          return disableMissing ? { ...module, enabled: false } : module;
-        }
-
-        const hasAnyPermission = Boolean(apiModule.ver ?? apiModule.criar ?? apiModule.editar ?? apiModule.excluir);
-
-        return {
-          ...module,
-          apiId: apiModule.id,
-          description: apiModule.description ?? module.description,
-          label: apiModule.name ?? apiModule.module ?? module.label,
-          enabled: preserveLocked && module.locked ? true : apiModule.is_active ?? (hasAnyPermission || defaultEnabled),
-        };
-      });
-
-      window.localStorage.setItem(MODULES_STORAGE_KEY, JSON.stringify(next.map(({ id, enabled }) => ({ id, enabled }))));
+      const next = mergeApiModules(current, apiModules, options);
+      saveModules(next);
       return next;
     });
   }, []);
 
   useEffect(() => {
     if (!authToken) {
-      setModulesLoaded(false);
+      setModulesLoaded(true);
       return;
     }
 
     let active = true;
-
-    setModulesLoaded(false);
-    setModules((current) => current.map((module) => ({ ...module, enabled: false })));
+    const hadStoredModules = window.localStorage.getItem(MODULES_STORAGE_KEY) !== null;
 
     modulesApi.myList()
       .then((apiModules) => {
         if (active) {
-          syncModulesFromApi(apiModules, {
-            defaultEnabled: true,
-            disableMissing: true,
-            preserveLocked: false,
+          setModules((current) => {
+            const next = mergeApiModules(current, apiModules, {
+              defaultEnabled: true,
+              disableMissing: true,
+              preserveLocked: false,
+            });
+            const changed = modulesSignature(current) !== modulesSignature(next);
+
+            saveModules(next);
+
+            if (changed && hadStoredModules) {
+              window.setTimeout(() => window.location.reload(), 0);
+            }
+
+            return next;
           });
         }
       })
